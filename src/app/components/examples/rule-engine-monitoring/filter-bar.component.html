@@ -1,0 +1,155 @@
+<!--
+
+    ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+
+    Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+
+    NOTICE: All information contained herein is, and remains
+    the property of ThingsBoard, Inc. and its suppliers,
+    if any.  The intellectual and technical concepts contained
+    herein are proprietary to ThingsBoard, Inc.
+    and its suppliers and may be covered by U.S. and Foreign Patents,
+    patents in process, and are protected by trade secret or copyright law.
+
+    Dissemination of this information or reproduction of this material is strictly forbidden
+    unless prior written permission is obtained from COMPANY.
+
+    Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+    managers or contractors who have executed Confidentiality and Non-disclosure agreements
+    explicitly covering such access.
+
+    The copyright notice above does not evidence any actual or intended publication
+    or disclosure  of  this source code, which includes
+    information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+    ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+    OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+    THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+    AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+    THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+    DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+    OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+
+-->
+<div class="rem-fb">
+
+  <!-- Row 1: all dropdowns -->
+  <div class="rem-fb-row">
+
+    <mat-form-field appearance="outline" class="rem-select-field rem-time-field">
+      <mat-label>Time Range</mat-label>
+      <mat-select [(ngModel)]="activePreset"
+                  (ngModelChange)="onTimeRangeChange()"
+                  [disabled]="locked">
+        <mat-option *ngFor="let p of presets" [value]="p.value">{{ p.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <ng-container *ngIf="showCustomRange">
+      <input class="rem-datetime-input"
+             type="datetime-local"
+             [(ngModel)]="customStart"
+             (change)="onCustomRangeChange()"
+             [disabled]="locked" />
+      <span class="rem-to">–</span>
+      <input class="rem-datetime-input"
+             type="datetime-local"
+             [(ngModel)]="customEnd"
+             (change)="onCustomRangeChange()"
+             [disabled]="locked" />
+    </ng-container>
+
+    <mat-form-field appearance="outline" class="rem-select-field">
+      <mat-label>Queue</mat-label>
+      <mat-select multiple
+                  [(ngModel)]="selectedQueueIds"
+                  (ngModelChange)="onQueueChange()"
+                  [disabled]="locked">
+        <div class="rem-option-search" (click)="$event.stopPropagation()">
+          <input class="rem-search-input"
+                 placeholder="Search queues…"
+                 [(ngModel)]="queueSearch"
+                 [ngModelOptions]="{standalone: true}" />
+        </div>
+        <mat-option *ngFor="let q of filteredQueues" [value]="q.id">{{ queueLabel(q) }}</mat-option>
+        <mat-option *ngIf="!filteredQueues.length" disabled class="rem-no-results">No results</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="rem-select-field">
+      <mat-label>Rule Chain</mat-label>
+      <mat-select multiple
+                  [(ngModel)]="selectedChainIds"
+                  (ngModelChange)="onChainChange()"
+                  [disabled]="locked">
+        <div class="rem-option-search" (click)="$event.stopPropagation()">
+          <input class="rem-search-input"
+                 placeholder="Search rule chains…"
+                 [(ngModel)]="chainSearch"
+                 [ngModelOptions]="{standalone: true}" />
+        </div>
+        <mat-option *ngFor="let c of filteredChains" [value]="c.id">{{ c.name }}</mat-option>
+        <mat-option *ngIf="!filteredChains.length" disabled class="rem-no-results">No results</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="rem-select-field rem-select-field--wide">
+      <mat-label>Rule Node</mat-label>
+      <mat-select multiple
+                  [(ngModel)]="selectedNodeIds"
+                  (ngModelChange)="onNodeChange()"
+                  [disabled]="locked">
+        <div class="rem-option-search" (click)="$event.stopPropagation()">
+          <input class="rem-search-input"
+                 placeholder="Search rule nodes…"
+                 [(ngModel)]="nodeSearch"
+                 [ngModelOptions]="{standalone: true}" />
+        </div>
+        <mat-option *ngFor="let n of visibleNodes" [value]="n.id">
+          {{ n.name }} <span class="rem-chain-hint">({{ n.ruleChainName }})</span>
+        </mat-option>
+        <mat-option *ngIf="!visibleNodes.length" disabled class="rem-no-results">No results</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="rem-service-filter">
+      <mat-checkbox
+          [checked]="selectedServiceId !== null"
+          [disabled]="selectedServiceId === null"
+          (change)="onServiceCheckboxChange()">
+        Services: {{ selectedServiceId ?? 'All' }}
+      </mat-checkbox>
+    </div>
+
+  </div>
+
+  <!-- Row 2: Compare and Reset -->
+  <div class="rem-fb-row rem-fb-actions">
+
+    <div class="rem-compare-toggle">
+      <span class="rem-fb-label">Compare</span>
+      <mat-slide-toggle
+          [checked]="compareActive"
+          (change)="onCompareToggle()">
+      </mat-slide-toggle>
+    </div>
+
+    <div class="rem-action-btns">
+      <button mat-stroked-button
+              class="rem-reset-btn"
+              (click)="onReset()">
+        <mat-icon>clear</mat-icon>
+        Reset
+      </button>
+
+      <button mat-stroked-button
+              class="rem-refresh-btn"
+              (click)="onRefresh()"
+              [disabled]="refreshing">
+        <mat-icon [class.rem-spin]="refreshing">refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+
+  </div>
+
+</div>

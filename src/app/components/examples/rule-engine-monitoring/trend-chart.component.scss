@@ -1,0 +1,150 @@
+/**
+ * ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+ *
+ * Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains
+ * the property of ThingsBoard, Inc. and its suppliers,
+ * if any.  The intellectual and technical concepts contained
+ * herein are proprietary to ThingsBoard, Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents,
+ * patents in process, and are protected by trade secret or copyright law.
+ *
+ * Dissemination of this information or reproduction of this material is strictly forbidden
+ * unless prior written permission is obtained from COMPANY.
+ *
+ * Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+ * managers or contractors who have executed Confidentiality and Non-disclosure agreements
+ * explicitly covering such access.
+ *
+ * The copyright notice above does not evidence any actual or intended publication
+ * or disclosure  of  this source code, which includes
+ * information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+ * ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+ * OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+ * THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+ * AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+ * THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+ * DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+ * OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+ */
+:host {
+  display: block;
+  height: 100%;
+}
+
+.rem-tc {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+}
+
+.rem-tc-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rem-tc-interval {
+  width: 120px;
+  flex-shrink: 0;
+
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
+}
+
+.rem-tc-range-legend {
+  display: flex;
+  gap: 16px;
+  padding: 2px 0 6px;
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.rem-tc-range-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.rem-tc-range-swatch {
+  display: inline-block;
+  width: 24px;
+  height: 12px;
+  border-radius: 2px;
+  border-width: 1px;
+  border-style: solid;
+
+  &--base {
+    background: rgba(84, 112, 198, 0.15);
+    border-color: rgba(84, 112, 198, 0.6);
+  }
+
+  &--compare {
+    background: rgba(255, 152, 0, 0.15);
+    border-color: rgba(255, 152, 0, 0.7);
+  }
+}
+
+.rem-tc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rem-tc-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: rgba(0, 0, 0, 0.76);
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+
+  &.rem-inactive {
+    opacity: 0.35;
+    text-decoration: line-through;
+  }
+
+  &:hover {
+    opacity: 0.75;
+  }
+}
+
+.rem-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rem-tc-loading {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.rem-tc-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f44336;
+  font-size: 0.875rem;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.rem-tc-chart {
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+}

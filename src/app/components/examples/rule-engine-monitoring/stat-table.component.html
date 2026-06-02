@@ -1,0 +1,175 @@
+<!--
+
+    ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+
+    Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+
+    NOTICE: All information contained herein is, and remains
+    the property of ThingsBoard, Inc. and its suppliers,
+    if any.  The intellectual and technical concepts contained
+    herein are proprietary to ThingsBoard, Inc.
+    and its suppliers and may be covered by U.S. and Foreign Patents,
+    patents in process, and are protected by trade secret or copyright law.
+
+    Dissemination of this information or reproduction of this material is strictly forbidden
+    unless prior written permission is obtained from COMPANY.
+
+    Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+    managers or contractors who have executed Confidentiality and Non-disclosure agreements
+    explicitly covering such access.
+
+    The copyright notice above does not evidence any actual or intended publication
+    or disclosure  of  this source code, which includes
+    information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+    ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+    OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+    THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+    AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+    THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+    DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+    OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+
+-->
+<div class="rem-st">
+
+  <div class="rem-st-toolbar">
+    <mat-form-field class="rem-st-groupby" appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Group by</mat-label>
+      <mat-select multiple [(ngModel)]="selectedGroupBy" (ngModelChange)="onGroupByChange()">
+        <mat-option *ngFor="let opt of groupOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button mat-button class="rem-st-clear-sort" (click)="clearSort()">
+      <mat-icon>sort</mat-icon> Clear sorting
+    </button>
+  </div>
+
+  <div class="rem-st-legend" *ngIf="compareMode">
+    <mat-icon class="rem-st-legend-icon">swap_vert</mat-icon>
+    <span>— sorted by absolute delta value desc</span>
+  </div>
+
+
+  <div class="rem-st-loading" *ngIf="loading">
+    <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+  </div>
+
+  <div class="rem-st-error" *ngIf="!loading && errorMessage">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <div class="rem-st-table-wrap" *ngIf="!loading && !errorMessage">
+    <table mat-table [dataSource]="rows" class="rem-st-table">
+
+      <ng-container matColumnDef="queue">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('queue')">
+          <span class="rem-st-col-label">Queue <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'queue' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">{{ row.queueDisplay }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="ruleChain">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('ruleChain')">
+          <span class="rem-st-col-label">Rule Chain <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'ruleChain' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">{{ row.ruleChainDisplay }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="ruleNode">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('ruleNode')">
+          <span class="rem-st-col-label">Rule Node <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'ruleNode' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">{{ row.ruleNodeDisplay }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="service">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('service')">
+          <span class="rem-st-col-label">Service <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'service' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">{{ row.serviceDisplay }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="execCount">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('execCount')">
+          <span class="rem-st-col-label">Rule Node Executions <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'execCount' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <ng-container *ngTemplateOutlet="metricCell; context: { $implicit: row.execCount }"></ng-container>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="avgDuration">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('avgDuration')">
+          <span class="rem-st-col-label">Avg Rule Node Duration <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'avgDuration' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <ng-container *ngTemplateOutlet="metricCell; context: { $implicit: row.avgDuration }"></ng-container>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="totalDuration">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('totalDuration')">
+          <span class="rem-st-col-label">Total Rule Node Execution Duration <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'totalDuration' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <ng-container *ngTemplateOutlet="metricCell; context: { $implicit: row.totalDuration }"></ng-container>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="errorCount">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('errorCount')">
+          <span class="rem-st-col-label">Rule Node Failed Executions <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'errorCount' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <ng-container *ngTemplateOutlet="metricCell; context: { $implicit: row.errorCount }"></ng-container>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="timeoutCount">
+        <th mat-header-cell *matHeaderCellDef class="rem-st-sort-col" (click)="onHeaderClick('timeoutCount')">
+          <span class="rem-st-col-label">Timeouts <ng-container *ngTemplateOutlet="sortBadge; context: { col: 'timeoutCount' }"></ng-container></span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <ng-container *ngTemplateOutlet="metricCell; context: { $implicit: row.timeoutCount }"></ng-container>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          class="rem-st-row"
+          (click)="onRowClick(row)"></tr>
+
+    </table>
+
+    <div class="rem-st-empty" *ngIf="rows.length === 0">No data</div>
+  </div>
+
+</div>
+
+<ng-template #metricCell let-cell>
+  <div class="rem-st-cell">
+    <span class="rem-st-primary"
+          [class.rem-delta--green]="cell.deltaColour === 'green'"
+          [class.rem-delta--red]="cell.deltaColour === 'red'">{{ cell.primary }}</span>
+    <span class="rem-st-secondary"
+          *ngIf="cell.deltaLabel"
+          [class.rem-delta--green]="cell.deltaColour === 'green'"
+          [class.rem-delta--red]="cell.deltaColour === 'red'">{{ cell.deltaLabel }}</span>
+  </div>
+</ng-template>
+
+<ng-template #sortBadge let-col="col">
+  <ng-container *ngIf="isActiveMetricCol(col)">
+    <mat-icon class="rem-st-sort-icon">swap_vert</mat-icon>
+  </ng-container>
+  <ng-container *ngIf="!isActiveMetricCol(col)">
+    <ng-container *ngIf="getSortRule(col) as rule">
+      <mat-icon class="rem-st-sort-icon"
+                [matTooltip]="rule.direction === 'asc' ? 'Ascending' : 'Descending'">
+        {{ rule.direction === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+      </mat-icon>
+      <span class="rem-st-sort-num" *ngIf="sortRules.length > 1">{{ rule.priority }}</span>
+    </ng-container>
+  </ng-container>
+</ng-template>

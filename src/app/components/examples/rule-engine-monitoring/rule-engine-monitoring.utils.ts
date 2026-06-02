@@ -29,42 +29,54 @@
 /// OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
 ///
 
-import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { SharedModule } from '@shared/public-api';
-import {
-  BasicWidgetConfigModule,
-  HomeComponentsModule,
-  WidgetConfigComponentsModule
-} from '@home/components/public-api';
-import { RuleEngineMonitoringComponent } from './rule-engine-monitoring/rule-engine-monitoring.component';
-import { FilterBarComponent } from './rule-engine-monitoring/filter-bar.component';
-import { KpiCardsComponent } from './rule-engine-monitoring/kpi-cards.component';
-import { TrendChartComponent } from './rule-engine-monitoring/trend-chart.component';
-import { StatTableComponent } from './rule-engine-monitoring/stat-table.component';
+import { ComparisonLabel } from './rule-engine-monitoring.models';
 
-@NgModule({
-  declarations: [
-    RuleEngineMonitoringComponent,
-    FilterBarComponent,
-    KpiCardsComponent,
-    TrendChartComponent,
-    StatTableComponent,
-  ],
-  imports: [
-    CommonModule,
-    SharedModule,
-    HomeComponentsModule,
-    BasicWidgetConfigModule,
-    WidgetConfigComponentsModule
-  ],
-  exports: [
-    RuleEngineMonitoringComponent,
-    FilterBarComponent,
-    KpiCardsComponent,
-    TrendChartComponent,
-    StatTableComponent,
-  ]
-})
-export class ExamplesModule {
+export function formatAvgDuration(ms: number | null): string {
+  if (ms === null || ms === undefined) { return '—'; }
+  return ms === 0 ? '< 1 ms' : `${Math.round(ms)} ms`;
 }
+
+export function formatDuration(ms: number): string {
+  if (ms === null || ms === undefined) {
+    return '0 ms';
+  }
+  if (ms < 1000) {
+    return `${ms} ms`;
+  }
+  if (ms < 60_000) {
+    return `${(ms / 1000).toFixed(1)} s`;
+  }
+  return `${(ms / 60_000).toFixed(1)} min`;
+}
+
+export function computeDelta(current: number, comparison: number): number | null {
+  if (!comparison) {
+    return null;
+  }
+  const delta = (current - comparison) / comparison * 100;
+  return Math.abs(delta) < 1 ? null : delta;
+}
+
+export function comparisonLabel(delta: number | null, lowerIsBetter: boolean): ComparisonLabel {
+  if (delta === null) {
+    return { delta: null, colour: 'neutral' };
+  }
+  const positive = delta > 0;
+  const improved = lowerIsBetter ? !positive : positive;
+  return { delta, colour: improved ? 'green' : 'red' };
+}
+
+export function buildGroupByParam(dims: string[]): string {
+  return dims.join(',');
+}
+
+// true = lower is better, false = higher is better
+export const METRIC_POLARITY: Record<string, boolean> = {
+  totalFailedExecs: true,
+  avgDuration: true,
+  totalProcessingTime: true,
+  queueTimeoutCount: true,
+  successRate: false,
+  totalExecs: false,
+  execCount: false,
+};
