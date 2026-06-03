@@ -51,6 +51,7 @@ export interface FilterOptions {
   queues: QueueOption[];
   ruleChains: RuleChainOption[];
   ruleNodes: RuleNodeOption[];
+  serviceIds: string[];
 }
 
 export interface FilterState {

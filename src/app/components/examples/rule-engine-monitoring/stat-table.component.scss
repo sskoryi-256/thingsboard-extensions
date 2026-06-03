@@ -118,6 +118,11 @@
   width: 100%;
 }
 
+// Link colour/underline (border-bottom) comes from the global ui-ngx anchor styles
+.rem-st-link {
+  white-space: nowrap;
+}
+
 ::ng-deep .rem-st-table {
   th.mat-header-cell {
     font-size: 0.625rem !important;

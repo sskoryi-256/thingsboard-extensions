@@ -104,6 +104,26 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.rem-add-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0 2px;
+  font-size: 0.875rem;
+  color: #305680;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .rem-search-input {
   width: 100%;
   border: none;
@@ -169,10 +189,4 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-/* Services filter */
-.rem-service-filter {
-  display: flex;
-  align-items: center;
 }

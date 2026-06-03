@@ -81,11 +81,18 @@ export class FilterBarComponent implements OnInit, OnChanges {
   selectedQueueIds: string[] = [];
   selectedChainIds: string[] = [];
   selectedNodeIds: string[] = [];
-  selectedServiceId: string | null = null;
+  selectedServiceIds: string[] = [];
 
   queueSearch = '';
   chainSearch = '';
   nodeSearch = '';
+  serviceSearch = '';
+
+  // Manually added (ad-hoc) entries — typed text is used as both id and name
+  customQueues: QueueOption[] = [];
+  customChains: RuleChainOption[] = [];
+  customNodes: RuleNodeOption[] = [];
+  customServices: string[] = [];
 
   compareActive = false;
 
@@ -95,25 +102,95 @@ export class FilterBarComponent implements OnInit, OnChanges {
 
   get filteredQueues(): QueueOption[] {
     if (!this.filterOptions) { return []; }
+    const all = [...this.customQueues, ...this.filterOptions.queues];
     const q = this.queueSearch.toLowerCase();
-    return q ? this.filterOptions.queues.filter(o => o.name.toLowerCase().includes(q)) : this.filterOptions.queues;
+    return q ? all.filter(o => o.name.toLowerCase().includes(q)) : all;
   }
 
   get filteredChains(): RuleChainOption[] {
     if (!this.filterOptions) { return []; }
+    const all = [...this.customChains, ...this.filterOptions.ruleChains];
     const q = this.chainSearch.toLowerCase();
-    return q ? this.filterOptions.ruleChains.filter(o => o.name.toLowerCase().includes(q)) : this.filterOptions.ruleChains;
+    return q ? all.filter(o => o.name.toLowerCase().includes(q)) : all;
   }
 
   get visibleNodes(): RuleNodeOption[] {
     if (!this.filterOptions) { return []; }
+    // Custom nodes are always visible — their rule chain is unknown
     let nodes = this.selectedChainIds.length
       ? this.filterOptions.ruleNodes.filter(n => this.selectedChainIds.includes(n.ruleChainId))
       : this.filterOptions.ruleNodes;
+    nodes = [...this.customNodes, ...nodes];
     const q = this.nodeSearch.toLowerCase();
     return q
       ? nodes.filter(n => n.name.toLowerCase().includes(q) || n.ruleChainName.toLowerCase().includes(q))
       : nodes;
+  }
+
+  get filteredServices(): string[] {
+    if (!this.filterOptions) { return []; }
+    const all = [...this.customServices, ...(this.filterOptions.serviceIds ?? [])];
+    const q = this.serviceSearch.toLowerCase();
+    return q ? all.filter(s => s.toLowerCase().includes(q)) : all;
+  }
+
+  canAddQueue(): boolean {
+    const t = this.queueSearch.trim();
+    return !!t && ![...this.customQueues, ...(this.filterOptions?.queues ?? [])]
+      .some(o => o.name === t || o.id === t);
+  }
+
+  addCustomQueue(): void {
+    const t = this.queueSearch.trim();
+    if (!t) { return; }
+    this.customQueues.push({ id: t, name: t, tenantId: null });
+    this.selectedQueueIds = [...this.selectedQueueIds, t];
+    this.queueSearch = '';
+    this.emitFilterChange();
+  }
+
+  canAddChain(): boolean {
+    const t = this.chainSearch.trim();
+    return !!t && ![...this.customChains, ...(this.filterOptions?.ruleChains ?? [])]
+      .some(o => o.name === t || o.id === t);
+  }
+
+  addCustomChain(): void {
+    const t = this.chainSearch.trim();
+    if (!t) { return; }
+    this.customChains.push({ id: t, name: t });
+    this.selectedChainIds = [...this.selectedChainIds, t];
+    this.chainSearch = '';
+    this.emitFilterChange();
+  }
+
+  canAddNode(): boolean {
+    const t = this.nodeSearch.trim();
+    return !!t && ![...this.customNodes, ...(this.filterOptions?.ruleNodes ?? [])]
+      .some(o => o.name === t || o.id === t);
+  }
+
+  addCustomNode(): void {
+    const t = this.nodeSearch.trim();
+    if (!t) { return; }
+    this.customNodes.push({ id: t, name: t, ruleChainId: '', ruleChainName: 'manual' });
+    this.selectedNodeIds = [...this.selectedNodeIds, t];
+    this.nodeSearch = '';
+    this.emitFilterChange();
+  }
+
+  canAddService(): boolean {
+    const t = this.serviceSearch.trim();
+    return !!t && ![...this.customServices, ...(this.filterOptions?.serviceIds ?? [])].includes(t);
+  }
+
+  addCustomService(): void {
+    const t = this.serviceSearch.trim();
+    if (!t) { return; }
+    this.customServices.push(t);
+    this.selectedServiceIds = [...this.selectedServiceIds, t];
+    this.serviceSearch = '';
+    this.emitFilterChange();
   }
 
   ngOnInit(): void {
@@ -128,10 +205,7 @@ export class FilterBarComponent implements OnInit, OnChanges {
       this.selectedQueueIds = [...(this.externalFilterState.queueIds     ?? [])];
       this.selectedChainIds = [...(this.externalFilterState.ruleChainIds ?? [])];
       this.selectedNodeIds  = [...(this.externalFilterState.ruleNodeIds  ?? [])];
-      const incoming = this.externalFilterState.serviceIds ?? [];
-      if (incoming.length > 0) {
-        this.selectedServiceId = incoming[0];
-      }
+      this.selectedServiceIds = [...(this.externalFilterState.serviceIds ?? [])];
     }
   }
 
@@ -156,11 +230,12 @@ export class FilterBarComponent implements OnInit, OnChanges {
 
   onChainChange(): void {
     if (this.selectedChainIds.length && this.filterOptions) {
-      const allowed = new Set(
-        this.filterOptions.ruleNodes
+      const allowed = new Set([
+        ...this.filterOptions.ruleNodes
           .filter(n => this.selectedChainIds.includes(n.ruleChainId))
-          .map(n => n.id)
-      );
+          .map(n => n.id),
+        ...this.customNodes.map(n => n.id), // manual nodes are never pruned
+      ]);
       this.selectedNodeIds = this.selectedNodeIds.filter(id => allowed.has(id));
     }
     this.emitFilterChange();
@@ -170,8 +245,7 @@ export class FilterBarComponent implements OnInit, OnChanges {
     this.emitFilterChange();
   }
 
-  onServiceCheckboxChange(): void {
-    this.selectedServiceId = null;
+  onServiceChange(): void {
     this.emitFilterChange();
   }
 
@@ -186,13 +260,18 @@ export class FilterBarComponent implements OnInit, OnChanges {
       this.resetClick.emit();
       return;
     }
-    this.selectedQueueIds  = [];
-    this.selectedChainIds  = [];
-    this.selectedNodeIds   = [];
-    this.selectedServiceId = null;
-    this.queueSearch = '';
-    this.chainSearch = '';
-    this.nodeSearch  = '';
+    this.selectedQueueIds   = [];
+    this.selectedChainIds   = [];
+    this.selectedNodeIds    = [];
+    this.selectedServiceIds = [];
+    this.queueSearch   = '';
+    this.chainSearch   = '';
+    this.nodeSearch    = '';
+    this.serviceSearch = '';
+    this.customQueues   = [];
+    this.customChains   = [];
+    this.customNodes    = [];
+    this.customServices = [];
     this.emitFilterChange();
     this.resetClick.emit();
   }
@@ -210,7 +289,7 @@ export class FilterBarComponent implements OnInit, OnChanges {
       queueIds:    [...this.selectedQueueIds],
       ruleChainIds:[...this.selectedChainIds],
       ruleNodeIds: [...this.selectedNodeIds],
-      serviceIds:  this.selectedServiceId !== null ? [this.selectedServiceId] : [],
+      serviceIds:  [...this.selectedServiceIds],
     });
   }
 

@@ -99,6 +99,14 @@ const METRIC_DELTA_FIELD: Partial<Record<string, SortField>> = {
   totalDuration: 'totalProcessingDeltaPercent', errorCount: 'errorCountDeltaPercent', timeoutCount: 'timeoutCountDeltaPercent',
 };
 
+// Backend sentinel ids ("No Rule Chain"/"No Rule Node"/"No Queue"/"Unknown Queue") — not navigable
+const SENTINEL_IDS = new Set([
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000004',
+]);
+
 const GROUP_OPTIONS: GroupByOption[] = [
   { label: 'Queue',      value: 'queueId' },
   { label: 'Rule Chain', value: 'ruleChainId' },
@@ -200,6 +208,21 @@ export class StatTableComponent implements OnChanges, OnDestroy {
     this.activeMetricCol = null;
     this.applySort();
     this.cdr.detectChanges();
+  }
+
+  /** Link to the rule chain page, or null when the row has no navigable rule chain. */
+  ruleChainLink(row: TableRow): string | null {
+    if (!row.ruleChainId || SENTINEL_IDS.has(row.ruleChainId)) return null;
+    return `${window.location.origin}/ruleChains/${encodeURIComponent(row.ruleChainId)}`;
+  }
+
+  /** Link to the rule node inside its rule chain, or null when not resolvable. */
+  ruleNodeLink(row: TableRow): string | null {
+    if (!row.ruleNodeId || SENTINEL_IDS.has(row.ruleNodeId)) return null;
+    const chainId = row.ruleChainId
+      ?? this.filterOptions?.ruleNodes.find(n => n.id === row.ruleNodeId)?.ruleChainId;
+    if (!chainId || SENTINEL_IDS.has(chainId)) return null;
+    return `${window.location.origin}/ruleChains/${encodeURIComponent(chainId)}?ruleNodeId=${encodeURIComponent(row.ruleNodeId)}`;
   }
 
   onRowClick(row: TableRow): void {
@@ -334,9 +357,38 @@ export class StatTableComponent implements OnChanges, OnDestroy {
   }
 
   private dimLabel(row: MergedTableRow, which: 'queue' | 'ruleChain' | 'ruleNode'): string {
-    if (which === 'queue')     return row.queueName     ?? row.queueId     ?? 'All';
-    if (which === 'ruleChain') return row.ruleChainName ?? row.ruleChainId ?? 'All';
-    return                            row.ruleNodeName  ?? row.ruleNodeId  ?? 'All';
+    if (which === 'queue')     return row.queueName     ?? row.queueId     ?? this.fallbackLabel('queue');
+    if (which === 'ruleChain') return row.ruleChainName ?? row.ruleChainId ?? this.fallbackLabel('ruleChain');
+    return                            row.ruleNodeName  ?? row.ruleNodeId  ?? this.fallbackLabel('ruleNode');
+  }
+
+  /** When not grouped by a dimension, show the active filter selection instead of "All". */
+  private fallbackLabel(which: 'queue' | 'ruleChain' | 'ruleNode' | 'service'): string {
+    const fs = this.filterState;
+    if (!fs) return 'All';
+    const opts = this.filterOptions;
+    let ids: string[];
+    let resolve: (id: string) => string | undefined;
+    switch (which) {
+      case 'queue':
+        ids = fs.queueIds;
+        resolve = id => opts?.queues.find(q => q.id === id)?.name;
+        break;
+      case 'ruleChain':
+        ids = fs.ruleChainIds;
+        resolve = id => opts?.ruleChains.find(c => c.id === id)?.name;
+        break;
+      case 'ruleNode':
+        ids = fs.ruleNodeIds;
+        resolve = id => opts?.ruleNodes.find(n => n.id === id)?.name;
+        break;
+      case 'service':
+        ids = fs.serviceIds;
+        resolve = () => undefined;
+        break;
+    }
+    if (!ids?.length) return 'All';
+    return ids.map(id => resolve(id) ?? id).join(', ');
   }
 
   private buildRows(rows: MergedTableRow[]): TableRow[] {
@@ -344,7 +396,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
       queueDisplay:     this.dimLabel(r, 'queue'),
       ruleChainDisplay: this.dimLabel(r, 'ruleChain'),
       ruleNodeDisplay:  this.dimLabel(r, 'ruleNode'),
-      serviceDisplay:   r.serviceId ?? 'All',
+      serviceDisplay:   r.serviceId ?? this.fallbackLabel('service'),
       queueId:          r.queueId,
       ruleChainId:      r.ruleChainId,
       ruleNodeId:       r.ruleNodeId,
@@ -379,7 +431,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
         queueDisplay:     this.dimLabel(ref, 'queue'),
         ruleChainDisplay: this.dimLabel(ref, 'ruleChain'),
         ruleNodeDisplay:  this.dimLabel(ref, 'ruleNode'),
-        serviceDisplay:   ref.serviceId ?? 'All',
+        serviceDisplay:   ref.serviceId ?? this.fallbackLabel('service'),
         queueId:          ref.queueId,
         ruleChainId:      ref.ruleChainId,
         ruleNodeId:       ref.ruleNodeId,
@@ -408,10 +460,10 @@ export class StatTableComponent implements OnChanges, OnDestroy {
       const toCell    = this.cellFromDelta(r.timeoutCount,    true,  v => (v ?? 0).toLocaleString());
 
       return {
-        queueDisplay:     queueName     ?? r.queueId     ?? 'All',
-        ruleChainDisplay: ruleChainName ?? r.ruleChainId ?? 'All',
-        ruleNodeDisplay:  ruleNodeName  ?? r.ruleNodeId  ?? 'All',
-        serviceDisplay:   r.serviceId ?? 'All',
+        queueDisplay:     queueName     ?? r.queueId     ?? this.fallbackLabel('queue'),
+        ruleChainDisplay: ruleChainName ?? r.ruleChainId ?? this.fallbackLabel('ruleChain'),
+        ruleNodeDisplay:  ruleNodeName  ?? r.ruleNodeId  ?? this.fallbackLabel('ruleNode'),
+        serviceDisplay:   r.serviceId ?? this.fallbackLabel('service'),
         queueId:          r.queueId,
         ruleChainId:      r.ruleChainId,
         ruleNodeId:       r.ruleNodeId,
