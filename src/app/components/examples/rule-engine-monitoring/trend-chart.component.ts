@@ -54,6 +54,7 @@ const SERIES_DEFS: SeriesDef[] = [
   { key: 'errorCount',       label: 'Rule Node Failed Executions',       color: '#ee6666' },
   { key: 'timeoutCount',     label: 'Queue Timeout Count',               color: '#fac858' },
   { key: 'avgDurationMs',    label: 'Avg Rule Node Duration',            color: '#91cc75' },
+  { key: 'maxDurationMs',    label: 'Max Rule Node Duration',            color: '#9a60b4' },
   { key: 'totalDurationMs',  label: 'Total Rule Node Execution Duration', color: '#73c0de' },
 ];
 
@@ -94,6 +95,11 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
 
   loading = false;
   errorMessage: string | null = null;
+
+  /** Blocking spinner only on the very first load; later refreshes update the chart in place. */
+  get initialLoading(): boolean {
+    return this.loading && this.lastNodeData.length === 0 && this.lastQueueData.length === 0;
+  }
 
   private static readonly BRUSH_STYLE = {
     color: 'rgba(84,112,198,0.15)', borderColor: 'rgba(84,112,198,0.6)', borderWidth: 1,
@@ -399,6 +405,7 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
 
   private formatSeriesValue(key: string, v: number): string {
     if (key === 'avgDurationMs') return formatAvgDuration(v);
+    if (key === 'maxDurationMs') return formatDuration(v);
     if (key === 'totalDurationMs') return formatDuration(v);
     return String(Math.round(v));
   }

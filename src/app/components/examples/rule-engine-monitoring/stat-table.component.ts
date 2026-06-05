@@ -51,6 +51,7 @@ type SortField =
   | 'queueName' | 'ruleChainName' | 'ruleNodeName' | 'serviceName'
   | 'execCountValue'         | 'execCountDeltaPercent'
   | 'avgDurationValue'       | 'avgDurationDeltaPercent'
+  | 'maxDurationValue'       | 'maxDurationDeltaPercent'
   | 'totalProcessingValue'   | 'totalProcessingDeltaPercent'
   | 'errorCountValue'        | 'errorCountDeltaPercent'
   | 'timeoutCountValue'      | 'timeoutCountDeltaPercent';
@@ -80,6 +81,7 @@ interface TableRow {
   serviceId:        string | null;
   execCount:    MetricCell;
   avgDuration:  MetricCell;
+  maxDuration:  MetricCell;
   totalDuration:MetricCell;
   errorCount:   MetricCell;
   timeoutCount: MetricCell;
@@ -91,11 +93,11 @@ const DIM_FIELD: Partial<Record<string, SortField>> = {
   queue: 'queueName', ruleChain: 'ruleChainName', ruleNode: 'ruleNodeName', service: 'serviceName',
 };
 const METRIC_VALUE_FIELD: Partial<Record<string, SortField>> = {
-  execCount: 'execCountValue',       avgDuration: 'avgDurationValue',
+  execCount: 'execCountValue',       avgDuration: 'avgDurationValue',       maxDuration: 'maxDurationValue',
   totalDuration: 'totalProcessingValue', errorCount: 'errorCountValue', timeoutCount: 'timeoutCountValue',
 };
 const METRIC_DELTA_FIELD: Partial<Record<string, SortField>> = {
-  execCount: 'execCountDeltaPercent', avgDuration: 'avgDurationDeltaPercent',
+  execCount: 'execCountDeltaPercent', avgDuration: 'avgDurationDeltaPercent', maxDuration: 'maxDurationDeltaPercent',
   totalDuration: 'totalProcessingDeltaPercent', errorCount: 'errorCountDeltaPercent', timeoutCount: 'timeoutCountDeltaPercent',
 };
 
@@ -138,7 +140,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
 
   readonly displayedColumns = [
     'queue', 'ruleChain', 'ruleNode', 'service',
-    'execCount', 'avgDuration', 'totalDuration', 'errorCount', 'timeoutCount'
+    'execCount', 'avgDuration', 'maxDuration', 'totalDuration', 'errorCount', 'timeoutCount'
   ];
 
   sortRules: SortRule[] = [];
@@ -160,6 +162,15 @@ export class StatTableComponent implements OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void { this.sub?.unsubscribe(); }
+
+  /** Blocking spinner only on the very first load; later refreshes update in place. */
+  get initialLoading(): boolean {
+    return this.loading && this.rows.length === 0;
+  }
+
+  trackByRow(_: number, row: TableRow): string {
+    return [row.queueId, row.ruleChainId, row.ruleNodeId, row.serviceId].join('|');
+  }
 
   onGroupByChange(): void {
     if (this.filterState && this.service) this.fetch();
@@ -250,6 +261,8 @@ export class StatTableComponent implements OnChanges, OnDestroy {
       case 'execCountDeltaPercent':       return row.execCount.deltaValue;
       case 'avgDurationValue':            return row.avgDuration.rawValue;
       case 'avgDurationDeltaPercent':     return row.avgDuration.deltaValue;
+      case 'maxDurationValue':            return row.maxDuration.rawValue;
+      case 'maxDurationDeltaPercent':     return row.maxDuration.deltaValue;
       case 'totalProcessingValue':        return row.totalDuration.rawValue;
       case 'totalProcessingDeltaPercent': return row.totalDuration.deltaValue;
       case 'errorCountValue':             return row.errorCount.rawValue;
@@ -403,6 +416,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
       serviceId:        r.serviceId,
       execCount:    this.cell(r.execCount,       undefined, false, v => (v ?? 0).toLocaleString()),
       avgDuration:  this.cell(r.avgDurationMs,   undefined, true,  v => formatAvgDuration(v ?? 0)),
+      maxDuration:  this.cell(r.maxDurationMs,   undefined, true,  v => formatDuration(v ?? 0)),
       totalDuration:this.cell(r.totalDurationMs, undefined, true,  v => formatDuration(v ?? 0)),
       errorCount:   this.cell(r.errorCount,      undefined, true,  v => (v ?? 0).toLocaleString()),
       timeoutCount: this.cell(r.timeoutCount,    undefined, true,  v => (v ?? 0).toLocaleString()),
@@ -423,6 +437,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
 
       const execCell  = this.cell(c?.execCount       ?? null, p?.execCount       ?? null, false, v => (v ?? 0).toLocaleString());
       const avgCell   = this.cell(c?.avgDurationMs   ?? null, p?.avgDurationMs   ?? null, true,  v => formatAvgDuration(v ?? 0));
+      const maxCell   = this.cell(c?.maxDurationMs   ?? null, p?.maxDurationMs   ?? null, true,  v => formatDuration(v ?? 0));
       const totCell   = this.cell(c?.totalDurationMs ?? null, p?.totalDurationMs ?? null, true,  v => formatDuration(v ?? 0));
       const errCell   = this.cell(c?.errorCount      ?? null, p?.errorCount      ?? null, true,  v => (v ?? 0).toLocaleString());
       const toCell    = this.cell(c?.timeoutCount    ?? null, p?.timeoutCount    ?? null, true,  v => (v ?? 0).toLocaleString());
@@ -436,7 +451,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
         ruleChainId:      ref.ruleChainId,
         ruleNodeId:       ref.ruleNodeId,
         serviceId:        ref.serviceId ?? null,
-        execCount: execCell, avgDuration: avgCell, totalDuration: totCell,
+        execCount: execCell, avgDuration: avgCell, maxDuration: maxCell, totalDuration: totCell,
         errorCount: errCell, timeoutCount: toCell,
       });
     }
@@ -455,6 +470,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
 
       const execCell  = this.cellFromDelta(r.execCount,       false, v => (v ?? 0).toLocaleString());
       const avgCell   = this.cellFromDelta(r.avgDurationMs,   true,  v => formatAvgDuration(v ?? 0));
+      const maxCell   = this.cellFromDelta(r.maxDurationMs,   true,  v => formatDuration(v ?? 0));
       const totCell   = this.cellFromDelta(r.totalDurationMs, true,  v => formatDuration(v ?? 0));
       const errCell   = this.cellFromDelta(r.errorCount,      true,  v => (v ?? 0).toLocaleString());
       const toCell    = this.cellFromDelta(r.timeoutCount,    true,  v => (v ?? 0).toLocaleString());
@@ -468,7 +484,7 @@ export class StatTableComponent implements OnChanges, OnDestroy {
         ruleChainId:      r.ruleChainId,
         ruleNodeId:       r.ruleNodeId,
         serviceId:        r.serviceId,
-        execCount: execCell, avgDuration: avgCell, totalDuration: totCell,
+        execCount: execCell, avgDuration: avgCell, maxDuration: maxCell, totalDuration: totCell,
         errorCount: errCell, timeoutCount: toCell,
       };
     });

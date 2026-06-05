@@ -29,13 +29,18 @@
 /// OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
 ///
 
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FilterOptions, FilterState, QueueOption, RuleChainOption, RuleNodeOption } from './rule-engine-monitoring.models';
 
 interface TimePreset {
   label: string;
   value: string;
   ms: number;
+}
+
+interface RefreshInterval {
+  label: string;
+  value: number;
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -49,7 +54,7 @@ const SYS_TENANT_ID = '13814000-1dd2-11b2-8080-808080808080';
   styleUrls: ['./filter-bar.component.scss'],
   standalone: false
 })
-export class FilterBarComponent implements OnInit, OnChanges {
+export class FilterBarComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() filterOptions: FilterOptions | null = null;
   @Input() locked = false;
@@ -95,6 +100,19 @@ export class FilterBarComponent implements OnInit, OnChanges {
   customServices: string[] = [];
 
   compareActive = false;
+
+  readonly refreshIntervals: RefreshInterval[] = [
+    { label: 'None',   value: 0 },
+    { label: '5 sec',  value: 5 * 1000 },
+    { label: '10 sec', value: 10 * 1000 },
+    { label: '15 sec', value: 15 * 1000 },
+    { label: '30 sec', value: 30 * 1000 },
+    { label: '1m',     value: 60 * 1000 },
+  ];
+
+  refreshIntervalMs = 0;
+
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   queueLabel(q: QueueOption): string {
     return q.tenantId === SYS_TENANT_ID ? `${q.name} [sys]` : q.name;
@@ -197,9 +215,17 @@ export class FilterBarComponent implements OnInit, OnChanges {
     this.emitFilterChange();
   }
 
+  ngOnDestroy(): void {
+    this.stopAutoRefresh();
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['locked'] && !this.locked) {
       this.compareActive = false;
+    }
+    if (changes['locked']) {
+      // Pause auto-refresh while in compare mode, resume when it ends
+      this.applyAutoRefresh();
     }
     if (changes['externalFilterState'] && this.externalFilterState) {
       this.selectedQueueIds = [...(this.externalFilterState.queueIds     ?? [])];
@@ -279,6 +305,30 @@ export class FilterBarComponent implements OnInit, OnChanges {
   onCompareToggle(): void {
     this.compareActive = !this.compareActive;
     this.compareToggle.emit(this.compareActive);
+    // Pause auto-refresh while comparing, resume otherwise
+    this.applyAutoRefresh();
+  }
+
+  onRefreshIntervalChange(): void {
+    this.applyAutoRefresh();
+  }
+
+  private applyAutoRefresh(): void {
+    this.stopAutoRefresh();
+    if (this.refreshIntervalMs > 0 && !this.compareActive) {
+      this.refreshTimer = setInterval(() => {
+        if (!this.compareActive && !this.refreshing) {
+          this.onRefresh();
+        }
+      }, this.refreshIntervalMs);
+    }
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.refreshTimer !== null) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
   }
 
   private emitFilterChange(): void {

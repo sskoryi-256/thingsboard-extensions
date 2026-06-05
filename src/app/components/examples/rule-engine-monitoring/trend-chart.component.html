@@ -61,11 +61,11 @@
     </span>
   </div>
 
-  <div class="rem-tc-loading" *ngIf="loading">
+  <div class="rem-tc-loading" *ngIf="initialLoading">
     <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
   </div>
 
-  <div class="rem-tc-error" *ngIf="!loading && errorMessage">
+  <div class="rem-tc-error" *ngIf="!initialLoading && errorMessage">
     <mat-icon>error_outline</mat-icon>
     {{ errorMessage }}
   </div>

@@ -79,6 +79,7 @@ export interface NodeStatsRow {
   errorCount: number | null;
   totalDurationMs: number | null;
   avgDurationMs: number | null;
+  maxDurationMs: number | null;
   p95DurationMs: number | null;
   tenantId: string | null;
   serviceId: string | null;
@@ -107,6 +108,7 @@ export interface NodeTsEntry {
   errorCount: number | null;
   totalDurationMs: number | null;
   avgDurationMs: number | null;
+  maxDurationMs: number | null;
   p95DurationMs: number | null;
 }
 
@@ -126,6 +128,7 @@ export interface MergedStatsTableRow {
   errorCount:      number | null;
   totalDurationMs: number | null;
   avgDurationMs:   number | null;
+  maxDurationMs:   number | null;
   p95DurationMs:   number | null;
   timeoutCount:    number | null;
 }
@@ -155,6 +158,7 @@ export interface MergedStatsDelta {
   errorCount:      MetricDelta;
   totalDurationMs: MetricDelta;
   avgDurationMs:   MetricDelta;
+  maxDurationMs:   MetricDelta;
   p95DurationMs:   MetricDelta;
   timeoutCount:    MetricDelta;
 }
@@ -172,6 +176,7 @@ export interface MergedTableRow {
   errorCount: number | null;
   avgDurationMs: number | null;
   totalDurationMs: number | null;
+  maxDurationMs: number | null;
   p95DurationMs: number | null;
   timeoutCount: number | null;
 }

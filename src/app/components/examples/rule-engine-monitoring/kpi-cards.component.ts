@@ -74,6 +74,15 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
 
   constructor(private cdr: ChangeDetectorRef) {}
 
+  /** Blocking spinner only on the very first load; later refreshes update in place. */
+  get initialLoading(): boolean {
+    return this.loading && this.cards.length === 0;
+  }
+
+  trackByCard(_: number, card: KpiCard): string {
+    return card.key;
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['injector'] && this.injector && !this.service) {
       this.service = new RuleEngineMonitoringWidgetService(this.injector);
@@ -138,6 +147,7 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
       queueId: r.queueId, ruleChainId: r.ruleChainId, ruleNodeId: r.ruleNodeId, serviceId: r.serviceId,
       execCount: r.execCount.baseValue, errorCount: r.errorCount.baseValue,
       totalDurationMs: r.totalDurationMs.baseValue, avgDurationMs: r.avgDurationMs.baseValue,
+      maxDurationMs: r.maxDurationMs.baseValue,
       p95DurationMs: r.p95DurationMs.baseValue, timeoutCount: r.timeoutCount.baseValue,
     };
   }
@@ -147,6 +157,7 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
       queueId: r.queueId, ruleChainId: r.ruleChainId, ruleNodeId: r.ruleNodeId, serviceId: r.serviceId,
       execCount: r.execCount.compareValue, errorCount: r.errorCount.compareValue,
       totalDurationMs: r.totalDurationMs.compareValue, avgDurationMs: r.avgDurationMs.compareValue,
+      maxDurationMs: r.maxDurationMs.compareValue,
       p95DurationMs: r.p95DurationMs.compareValue, timeoutCount: r.timeoutCount.compareValue,
     };
   }

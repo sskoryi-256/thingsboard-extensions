@@ -168,6 +168,14 @@
         <mat-icon [class.rem-spin]="refreshing">refresh</mat-icon>
         Refresh
       </button>
+
+      <mat-form-field appearance="outline" class="rem-select-field rem-refresh-interval-field">
+        <mat-label>Auto-refresh</mat-label>
+        <mat-select [(ngModel)]="refreshIntervalMs"
+                    (ngModelChange)="onRefreshIntervalChange()">
+          <mat-option *ngFor="let i of refreshIntervals" [value]="i.value">{{ i.label }}</mat-option>
+        </mat-select>
+      </mat-form-field>
     </div>
 
   </div>
