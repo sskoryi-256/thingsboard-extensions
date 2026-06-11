@@ -49,6 +49,24 @@
     </tb-rem-filter-bar>
   </div>
 
+  <nav class="rem-breadcrumb" *ngIf="filterState" aria-label="Drill-down path">
+    <button type="button"
+            class="rem-crumb"
+            [class.rem-crumb--current]="breadcrumbItems.length === 0"
+            [disabled]="compareActive"
+            (click)="onBreadcrumbAll()">All</button>
+    <ng-container *ngFor="let item of breadcrumbItems; let last = last">
+      <mat-icon class="rem-crumb-sep">chevron_right</mat-icon>
+      <button type="button"
+              class="rem-crumb"
+              [class.rem-crumb--current]="last"
+              [disabled]="compareActive || last"
+              (click)="onBreadcrumbClick(item.type)">
+        <span class="rem-crumb-prefix">{{ item.prefix }}:</span> {{ item.label }}
+      </button>
+    </ng-container>
+  </nav>
+
   <div class="rem-kpi-section" *ngIf="filterState">
     <tb-rem-kpi-cards
         [filterState]="filterState"
@@ -64,7 +82,8 @@
           [rangeSelectActive]="rangeSelectActive"
           [compareActive]="compareActive"
           [injector]="injector"
-          (rangeSelected)="onRangeSelected($event)">
+          (rangeSelected)="onRangeSelected($event)"
+          (refresh)="onChartRefresh()">
       </tb-rem-trend-chart>
     </div>
 

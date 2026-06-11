@@ -46,7 +46,20 @@ export function formatDuration(ms: number): string {
   if (ms < 60_000) {
     return `${(ms / 1000).toFixed(1)} s`;
   }
-  return `${(ms / 60_000).toFixed(1)} min`;
+  if (ms < 3_600_000) {
+    return `${(ms / 60_000).toFixed(1)} min`;
+  }
+  return `${(ms / 3_600_000).toFixed(1)} h`;
+}
+
+/** Compact number formatting for the inspector: 1,200,000 → "1.2M", 18,900 → "18.9K", 134,000 → "134K". */
+export function formatCompact(n: number): string {
+  const abs = Math.abs(n);
+  const strip = (x: number) => x.toFixed(1).replace(/\.0$/, '');
+  if (abs >= 1e9) return `${strip(n / 1e9)}B`;
+  if (abs >= 1e6) return `${strip(n / 1e6)}M`;
+  if (abs >= 1e3) return `${strip(n / 1e3)}K`;
+  return Math.round(n).toLocaleString('en-US');
 }
 
 export function computeDelta(current: number, comparison: number): number | null {
@@ -68,6 +81,44 @@ export function comparisonLabel(delta: number | null, lowerIsBetter: boolean): C
 
 export function buildGroupByParam(dims: string[]): string {
   return dims.join(',');
+}
+
+export interface SparsePoint {
+  bucketTime: number;
+  value: number;
+}
+
+export type FillMode = 'zero' | 'null';
+
+/**
+ * Converts a sparse time-series (only buckets where something happened) into a dense
+ * series covering every expected bucket in [startTs, endTs). Missing buckets are filled
+ * with 0 ('zero' mode — count/sum/gauge metrics) or null ('null' mode — duration metrics
+ * that have no meaning when no executions happened).
+ *
+ * The grid is aligned to multiples of intervalMs to match the backend bucket boundaries
+ * computed as (bucket_time / intervalMs) * intervalMs.
+ */
+export function densifyTimeSeries(
+  points: SparsePoint[],
+  startTs: number,
+  endTs: number,
+  intervalMs: number,
+  fillMode: FillMode
+): [number, number | null][] {
+  const valuesByBucket = new Map<number, number>();
+  for (const point of points) {
+    valuesByBucket.set(point.bucketTime, point.value);
+  }
+
+  const fill = fillMode === 'zero' ? 0 : null;
+  const alignedStart = Math.floor(startTs / intervalMs) * intervalMs;
+
+  const result: [number, number | null][] = [];
+  for (let bucket = alignedStart; bucket < endTs; bucket += intervalMs) {
+    result.push([bucket, valuesByBucket.get(bucket) ?? fill]);
+  }
+  return result;
 }
 
 // true = lower is better, false = higher is better

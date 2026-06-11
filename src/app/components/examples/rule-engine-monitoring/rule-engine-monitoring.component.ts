@@ -29,12 +29,36 @@
 /// OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
 ///
 
-import { Component, Injector, Input, OnInit } from '@angular/core';
+import { Component, Injector, Input, OnInit, ViewChild } from '@angular/core';
 import { WidgetContext } from '@home/models/widget-component.models';
 import { CompareState, FilterOptions, FilterState } from './rule-engine-monitoring.models';
 import { RuleEngineMonitoringWidgetService, RuleEngineHttpError } from './rule-engine-monitoring.service';
+import { FilterBarComponent } from './filter-bar.component';
 
 const SYS_TENANT_ID = '13814000-1dd2-11b2-8080-808080808080';
+
+// Drill-down dimensions, ordered as a hierarchy: clicking a breadcrumb keeps this dimension and
+// everything before it, and clears everything after it.
+type DrillType = 'queue' | 'ruleChain' | 'ruleNode' | 'service';
+
+interface DrillDim {
+  type: DrillType;
+  prefix: string;                  // breadcrumb label prefix, e.g. "Queue"
+  field: keyof Pick<FilterState, 'queueIds' | 'ruleChainIds' | 'ruleNodeIds' | 'serviceIds'>;
+}
+
+const DRILL_DIMS: DrillDim[] = [
+  { type: 'queue',     prefix: 'Queue',      field: 'queueIds' },
+  { type: 'ruleChain', prefix: 'Rule Chain', field: 'ruleChainIds' },
+  { type: 'ruleNode',  prefix: 'Rule Node',  field: 'ruleNodeIds' },
+  { type: 'service',   prefix: 'Service',    field: 'serviceIds' },
+];
+
+export interface BreadcrumbItem {
+  type: DrillType;
+  prefix: string;
+  label: string;
+}
 
 @Component({
   selector: 'tb-rule-engine-monitoring',
@@ -45,6 +69,8 @@ const SYS_TENANT_ID = '13814000-1dd2-11b2-8080-808080808080';
 export class RuleEngineMonitoringComponent implements OnInit {
 
   @Input() ctx: WidgetContext;
+
+  @ViewChild(FilterBarComponent) private filterBar?: FilterBarComponent;
 
   filterOptions: FilterOptions | null = null;
   filterState: FilterState | null = null;
@@ -99,6 +125,12 @@ export class RuleEngineMonitoringComponent implements OnInit {
     this.loadFilters();
   }
 
+  /** Refresh fired from the chart toolbar — reload everything with current state via the filter bar
+   *  (reloads filter options and re-emits the filter, recomputing rolling time ranges). */
+  onChartRefresh(): void {
+    this.filterBar?.triggerReload();
+  }
+
   onResetClick(): void {
     if (this.compareActive) {
       // In compare mode: clear selected ranges, go back to N/A / No data state, re-enable brush
@@ -107,6 +139,57 @@ export class RuleEngineMonitoringComponent implements OnInit {
     }
     // Normal mode: filter bar already cleared dimension selections and emitted filterChange
     this.ctx.detectChanges();
+  }
+
+  /** Drill-down path derived from the current entity filters (queue → rule chain → rule node →
+   *  service). Auto-syncs with both table row clicks and manual dropdown changes. */
+  get breadcrumbItems(): BreadcrumbItem[] {
+    const fs = this.filterState;
+    if (!fs) return [];
+    const items: BreadcrumbItem[] = [];
+    for (const dim of DRILL_DIMS) {
+      const ids = fs[dim.field] ?? [];
+      if (ids.length) {
+        items.push({ type: dim.type, prefix: dim.prefix, label: this.resolveDrillLabel(dim.type, ids) });
+      }
+    }
+    return items;
+  }
+
+  /** "All" → clear every drill-down entity filter, keeping time range, interval, etc. */
+  onBreadcrumbAll(): void {
+    if (!this.filterState || this.compareActive) return;
+    this.filterState = {
+      ...this.filterState,
+      queueIds: [], ruleChainIds: [], ruleNodeIds: [], serviceIds: [],
+    };
+    this.ctx.detectChanges();
+  }
+
+  /** Click an intermediate crumb → keep that dimension and earlier ones, clear deeper ones. */
+  onBreadcrumbClick(type: DrillType): void {
+    if (!this.filterState || this.compareActive) return;
+    const idx = DRILL_DIMS.findIndex(d => d.type === type);
+    if (idx < 0) return;
+    const update: FilterState = { ...this.filterState };
+    DRILL_DIMS.forEach((dim, i) => {
+      if (i > idx) update[dim.field] = [];
+    });
+    this.filterState = update;
+    this.ctx.detectChanges();
+  }
+
+  private resolveDrillLabel(type: DrillType, ids: string[]): string {
+    const opts = this.filterOptions;
+    const resolve = (id: string): string => {
+      switch (type) {
+        case 'queue':     return opts?.queues.find(q => q.id === id)?.name     ?? id;
+        case 'ruleChain': return opts?.ruleChains.find(c => c.id === id)?.name ?? id;
+        case 'ruleNode':  return opts?.ruleNodes.find(n => n.id === id)?.name  ?? id;
+        case 'service':   return id;
+      }
+    };
+    return ids.map(resolve).join(', ');
   }
 
   onRangeSelected(range: { start: number; end: number }): void {

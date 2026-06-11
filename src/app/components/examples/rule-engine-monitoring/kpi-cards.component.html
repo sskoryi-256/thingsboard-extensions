@@ -43,7 +43,7 @@
   <div class="rem-kpi-card" *ngFor="let card of cards; trackBy: trackByCard">
     <div class="rem-kpi-label">
       <span>{{ card.label }}</span>
-      <mat-icon *ngIf="cardDescriptions[card.key] as desc"
+      <mat-icon *ngIf="cardDescription(card.key) as desc"
                 #cardTip="matTooltip"
                 class="rem-kpi-info"
                 [matTooltip]="desc"

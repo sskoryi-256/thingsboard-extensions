@@ -255,11 +255,32 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
       card('totalExecs',        'Total Rule Node Executions',          current.totalExecs,    compare?.totalExecs,    fmtNum),
       card('totalFailedExecs',  'Total Rule Node Failed Executions',   current.totalErrors,   compare?.totalErrors,   fmtNum),
       card('successRate',       'Rule Node Success Rate',    current.successRate,   compare?.successRate,   fmtRate),
-      card('queueTimeoutCount', 'Queue Timeout Count',       current.timeoutCount,  compare?.timeoutCount,  fmtNum),
+      card('queueTimeoutCount', this.timeoutLabel(),         current.timeoutCount,  compare?.timeoutCount,  fmtNum),
       lagCard,
       card('avgDuration',       'Avg Rule Node Execution Duration',    current.avgDurationMs, compare?.avgDurationMs, (v) => formatAvgDuration(v ?? 0)),
       card('totalProcessingTime','Total Rule Node Execution Duration',    current.totalDurationMs, compare?.totalDurationMs, fmtDur),
     ];
+  }
+
+  /** Tooltip text for a card. The queue-timeout metric changes meaning when a rule chain/node is
+   *  selected — timeouts are then grouped by the last rule node visited before the timeout. */
+  cardDescription(key: string): string | null {
+    if (key === 'queueTimeoutCount' && this.timeoutLastNode()) {
+      return 'When a timeout occurs, it is attributed to the last rule node visited before the timeout. '
+        + 'Counts are grouped by that last-visited rule node.';
+    }
+    return this.cardDescriptions[key] ?? null;
+  }
+
+  /** When a rule chain or rule node is selected, queue timeouts are counted as hits on the last
+   *  node, so the metric is relabelled accordingly. */
+  private timeoutLabel(): string {
+    return this.timeoutLastNode() ? 'Queue Timeout Last-Node Hits' : 'Queue Timeout Count';
+  }
+
+  private timeoutLastNode(): boolean {
+    const fs = this.filterState;
+    return !!fs && ((fs.ruleChainIds?.length ?? 0) > 0 || (fs.ruleNodeIds?.length ?? 0) > 0);
   }
 
   private handleError(err: RuleEngineHttpError): void {

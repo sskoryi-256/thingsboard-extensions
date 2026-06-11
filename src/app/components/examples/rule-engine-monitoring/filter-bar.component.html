@@ -32,7 +32,7 @@
 -->
 <div class="rem-fb">
 
-  <!-- Row 1: all dropdowns -->
+  <!-- Filters: data scope (with data-reload controls pushed to the right) -->
   <div class="rem-fb-row">
 
     <mat-form-field appearance="outline" class="rem-select-field rem-time-field">
@@ -142,7 +142,7 @@
 
   </div>
 
-  <!-- Row 2: Compare and Reset -->
+  <!-- Analysis controls: compare mode + temporary view reset -->
   <div class="rem-fb-row rem-fb-actions">
 
     <div class="rem-compare-toggle">
@@ -153,30 +153,13 @@
       </mat-slide-toggle>
     </div>
 
-    <div class="rem-action-btns">
-      <button mat-stroked-button
-              class="rem-reset-btn"
-              (click)="onReset()">
-        <mat-icon>clear</mat-icon>
-        Reset
-      </button>
-
-      <button mat-stroked-button
-              class="rem-refresh-btn"
-              (click)="onRefresh()"
-              [disabled]="refreshing">
-        <mat-icon [class.rem-spin]="refreshing">refresh</mat-icon>
-        Refresh
-      </button>
-
-      <mat-form-field appearance="outline" class="rem-select-field rem-refresh-interval-field">
-        <mat-label>Auto-refresh</mat-label>
-        <mat-select [(ngModel)]="refreshIntervalMs"
-                    (ngModelChange)="onRefreshIntervalChange()">
-          <mat-option *ngFor="let i of refreshIntervals" [value]="i.value">{{ i.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
+    <button mat-icon-button
+            *ngIf="compareActive"
+            class="rem-reset-btn"
+            matTooltip="Reset view — clear selected comparison windows"
+            (click)="onReset()">
+      <mat-icon>close</mat-icon>
+    </button>
 
   </div>
 
