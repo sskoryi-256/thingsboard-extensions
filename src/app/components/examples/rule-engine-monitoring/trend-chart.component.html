@@ -48,6 +48,11 @@
            (click)="toggleSeries(def.key)">
         <span class="rem-legend-dot" [style.background]="def.color"></span>
         <span>{{ def.label }}</span>
+        <mat-icon #seriesTip="matTooltip"
+                  class="rem-tc-legend-info"
+                  [matTooltip]="def.description"
+                  matTooltipPosition="above"
+                  (click)="$event.stopPropagation(); seriesTip.toggle()">info_outline</mat-icon>
       </div>
     </div>
   </div>

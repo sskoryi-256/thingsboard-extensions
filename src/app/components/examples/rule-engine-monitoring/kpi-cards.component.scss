@@ -75,6 +75,20 @@
   font-size: 0.75rem;
   color: rgba(0, 0, 0, 0.54);
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rem-kpi-info {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  color: rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+
+  &:hover { color: rgba(0, 0, 0, 0.6); }
 }
 
 .rem-kpi-value {

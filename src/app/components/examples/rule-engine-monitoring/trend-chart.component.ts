@@ -39,7 +39,7 @@ import { LineChart } from 'echarts/charts';
 import { BrushComponent, DataZoomComponent, GridComponent, MarkAreaComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { combineLatest, Subscription } from 'rxjs';
-import { FilterState, NodeTsEntry, QueueTsEntry } from './rule-engine-monitoring.models';
+import { FilterState, NodeTsEntry, QueueLagTsEntry, QueueTsEntry } from './rule-engine-monitoring.models';
 import { RuleEngineMonitoringWidgetService, RuleEngineHttpError } from './rule-engine-monitoring.service';
 import { formatAvgDuration, formatDuration } from './rule-engine-monitoring.utils';
 
@@ -47,15 +47,17 @@ interface SeriesDef {
   key: string;
   label: string;
   color: string;
+  description: string;
 }
 
 const SERIES_DEFS: SeriesDef[] = [
-  { key: 'execCount',        label: 'Rule Node Executions',              color: '#5470c6' },
-  { key: 'errorCount',       label: 'Rule Node Failed Executions',       color: '#ee6666' },
-  { key: 'timeoutCount',     label: 'Queue Timeout Count',               color: '#fac858' },
-  { key: 'avgDurationMs',    label: 'Avg Rule Node Duration',            color: '#91cc75' },
-  { key: 'maxDurationMs',    label: 'Max Rule Node Duration',            color: '#9a60b4' },
-  { key: 'totalDurationMs',  label: 'Total Rule Node Execution Duration', color: '#73c0de' },
+  { key: 'execCount',        label: 'Rule Node Executions',              color: '#5470c6', description: 'Number of rule node executions per time bucket.' },
+  { key: 'errorCount',       label: 'Rule Node Failed Executions',       color: '#ee6666', description: 'Number of failed rule node executions per time bucket.' },
+  { key: 'timeoutCount',     label: 'Queue Timeout Count',               color: '#fac858', description: 'Timed out messages per time bucket.' },
+  { key: 'lag',              label: 'Max Queue Lag',                     color: '#ee82ee', description: 'Highest one-queue lag per time bucket' },
+  { key: 'avgDurationMs',    label: 'Avg Rule Node Duration',            color: '#91cc75', description: 'Average rule node execution duration per time bucket.' },
+  { key: 'maxDurationMs',    label: 'Max Rule Node Duration',            color: '#9a60b4', description: 'Maximum rule node execution duration per time bucket.' },
+  { key: 'totalDurationMs',  label: 'Total Rule Node Execution Duration', color: '#73c0de', description: 'Sum of rule node execution durations per time bucket.' },
 ];
 
 const AXIS_GAP = 65;
@@ -98,7 +100,7 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
 
   /** Blocking spinner only on the very first load; later refreshes update the chart in place. */
   get initialLoading(): boolean {
-    return this.loading && this.lastNodeData.length === 0 && this.lastQueueData.length === 0;
+    return this.loading && this.lastNodeData.length === 0 && this.lastQueueData.length === 0 && this.lastLagData.length === 0;
   }
 
   private static readonly BRUSH_STYLE = {
@@ -111,6 +113,7 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
   private resizeObserver: ResizeObserver | null = null;
   private lastNodeData: NodeTsEntry[] = [];
   private lastQueueData: QueueTsEntry[] = [];
+  private lastLagData: QueueLagTsEntry[] = [];
 
   // Brush-selection state
   private brushDone: 0 | 1 | 2 = 0;
@@ -211,7 +214,7 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
     const series = SERIES_DEFS.map(def => ({
       id: def.key,
       data: this.seriesVisible[def.key]
-        ? this.extractData(def.key, this.lastNodeData, this.lastQueueData)
+        ? this.extractData(def.key, this.lastNodeData, this.lastQueueData, this.lastLagData)
         : [],
     }));
     this.chart.setOption({ yAxis: yAxes, grid, series }, { replaceMerge: ['yAxis', 'grid'] });
@@ -227,9 +230,10 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
     this.sub = combineLatest([
       this.service!.getNodeStatsTimeseries(filter, this.selectedIntervalMs),
       this.service!.getQueueStatsTimeseries(filter, this.selectedIntervalMs),
+      this.service!.getQueueLagStatsTimeseries(filter, this.selectedIntervalMs),
     ]).subscribe({
-      next: ([nodeData, queueData]) => {
-        this.applyData(nodeData, queueData);
+      next: ([nodeData, queueData, lagData]) => {
+        this.applyData(nodeData, queueData, lagData);
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -243,16 +247,17 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
     });
   }
 
-  private applyData(nodeData: NodeTsEntry[], queueData: QueueTsEntry[]): void {
+  private applyData(nodeData: NodeTsEntry[], queueData: QueueTsEntry[], lagData: QueueLagTsEntry[]): void {
     if (!this.chart || !this.filterState) return;
 
     this.lastNodeData = nodeData;
     this.lastQueueData = queueData;
+    this.lastLagData = lagData;
 
     const series = SERIES_DEFS.map(def => ({
       id: def.key,
       data: this.seriesVisible[def.key]
-        ? this.extractData(def.key, nodeData, queueData)
+        ? this.extractData(def.key, nodeData, queueData, lagData)
         : [],
     }));
 
@@ -262,9 +267,12 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
     });
   }
 
-  private extractData(key: string, nodeData: NodeTsEntry[], queueData: QueueTsEntry[]): [number, number][] {
+  private extractData(key: string, nodeData: NodeTsEntry[], queueData: QueueTsEntry[], lagData: QueueLagTsEntry[]): [number, number][] {
     if (key === 'timeoutCount') {
       return queueData.map(d => [d.bucketTime, d.timeoutCount ?? 0]);
+    }
+    if (key === 'lag') {
+      return lagData.map(d => [d.bucketTime, d.lag ?? 0]);
     }
     return nodeData.map(d => [d.bucketTime, (d as any)[key] ?? 0]);
   }
@@ -342,7 +350,7 @@ export class TrendChartComponent implements OnChanges, AfterViewInit, OnDestroy 
         show: visible,
         position: 'left',
         offset,
-        scale: true,
+        min: 0,
         splitLine: { show: i === 0 },
         axisLabel: {
           color: def.color,

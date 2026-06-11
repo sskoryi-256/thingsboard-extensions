@@ -30,7 +30,7 @@
 ///
 
 import { ChangeDetectorRef, Component, Input, Injector, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import { CompareState, FilterState, MergedStatsDelta, MergedStatsTableRow } from './rule-engine-monitoring.models';
 import { RuleEngineMonitoringWidgetService, RuleEngineHttpError } from './rule-engine-monitoring.service';
 import { comparisonLabel, formatAvgDuration, formatDuration, METRIC_POLARITY } from './rule-engine-monitoring.utils';
@@ -69,6 +69,17 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
   loading = false;
   errorMessage: string | null = null;
 
+  /** Short per-metric explanations, shown when the info icon on a card is pressed. */
+  readonly cardDescriptions: Record<string, string> = {
+    totalExecs:          'Total number of rule node executions in the selected time range.',
+    totalFailedExecs:    'Number of rule node executions that ended with an error.',
+    successRate:         'Share of executions that completed without error (successful ÷ total).',
+    queueTimeoutCount:   'Number of timed-out messages during processing',
+    currentQueueLag:     'Last-known sum lag across queues',
+    avgDuration:         'Average time a rule node took to process a single message.',
+    totalProcessingTime: 'Sum of all rule node execution durations over the selected range.',
+  };
+
   private service: RuleEngineMonitoringWidgetService | null = null;
   private sub: Subscription | null = null;
 
@@ -99,17 +110,25 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
   private fetch(): void {
     this.sub?.unsubscribe();
     this.errorMessage = null;
-
-    // Compare mode active but no range brushed yet — show N/A without fetching
-    if (this.compareState !== null && this.compareState.baseRange === null) {
-      this.loading = false;
-      this.cards = this.buildCards(this.naMetrics(), null);
-      this.cdr.detectChanges();
-      return;
-    }
-
     this.loading = true;
     this.cdr.detectChanges();
+
+    // Current queue lag is the last-known total — independent of the selected/compare range,
+    // shown as a single value with no before/after/delta even in compare mode.
+    const lag$ = this.service!.getCurrentQueueLag();
+
+    // Compare mode active but no range brushed yet — show N/A metrics, but still surface current lag
+    if (this.compareState !== null && this.compareState.baseRange === null) {
+      this.sub = lag$.subscribe({
+        next: (lag: number) => {
+          this.cards = this.buildCards(this.naMetrics(), null, lag);
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: (err: RuleEngineHttpError) => this.handleError(err)
+      });
+      return;
+    }
 
     const filter: FilterState = this.compareState?.baseRange
       ? { ...this.filterState!, startTs: this.compareState.baseRange.startTs, endTs: this.compareState.baseRange.endTs }
@@ -119,11 +138,12 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
       : undefined;
 
     if (cmpFilter) {
-      this.sub = this.service!.getStatsTableCompare(filter, cmpFilter).subscribe({
-        next: (deltaRows: MergedStatsDelta[]) => {
+      this.sub = combineLatest([this.service!.getStatsTableCompare(filter, cmpFilter), lag$]).subscribe({
+        next: ([deltaRows, lag]: [MergedStatsDelta[], number]) => {
           this.cards = this.buildCards(
             this.computeMetrics(deltaRows.map(r => this.toBaseRow(r))),
-            this.computeMetrics(deltaRows.map(r => this.toCompareRow(r)))
+            this.computeMetrics(deltaRows.map(r => this.toCompareRow(r))),
+            lag
           );
           this.loading = false;
           this.cdr.detectChanges();
@@ -131,9 +151,9 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
         error: (err: RuleEngineHttpError) => this.handleError(err)
       });
     } else {
-      this.sub = this.service!.getStatsTable(filter).subscribe({
-        next: (rows: MergedStatsTableRow[]) => {
-          this.cards = this.buildCards(this.computeMetrics(rows), null);
+      this.sub = combineLatest([this.service!.getStatsTable(filter), lag$]).subscribe({
+        next: ([rows, lag]: [MergedStatsTableRow[], number]) => {
+          this.cards = this.buildCards(this.computeMetrics(rows), null, lag);
           this.loading = false;
           this.cdr.detectChanges();
         },
@@ -184,7 +204,7 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
     };
   }
 
-  private buildCards(current: KpiMetrics, compare: KpiMetrics | null): KpiCard[] {
+  private buildCards(current: KpiMetrics, compare: KpiMetrics | null, currentLag: number): KpiCard[] {
     const fmtNum  = (v: number | null): string => (v ?? 0).toLocaleString();
     const fmtDur  = (v: number | null): string => formatDuration(v ?? 0);
     const fmtRate = (v: number | null): string => `${(v ?? 0).toFixed(1)}%`;
@@ -224,11 +244,19 @@ export class KpiCardsComponent implements OnChanges, OnDestroy {
       return { key, label, primaryValue: fmt(comp), beforeValue: `Before: ${fmt(base)}`, deltaLabel, deltaColour: colour };
     };
 
+    // Current queue lag has no before/after/delta even in compare mode (excluded from comparison),
+    // so it is rendered as a plain single value via null before/delta fields.
+    const lagCard: KpiCard = {
+      key: 'currentQueueLag', label: 'Current Queue Lag', primaryValue: fmtNum(currentLag),
+      beforeValue: null, deltaLabel: null, deltaColour: null,
+    };
+
     return [
       card('totalExecs',        'Total Rule Node Executions',          current.totalExecs,    compare?.totalExecs,    fmtNum),
       card('totalFailedExecs',  'Total Rule Node Failed Executions',   current.totalErrors,   compare?.totalErrors,   fmtNum),
       card('successRate',       'Rule Node Success Rate',    current.successRate,   compare?.successRate,   fmtRate),
       card('queueTimeoutCount', 'Queue Timeout Count',       current.timeoutCount,  compare?.timeoutCount,  fmtNum),
+      lagCard,
       card('avgDuration',       'Avg Rule Node Execution Duration',    current.avgDurationMs, compare?.avgDurationMs, (v) => formatAvgDuration(v ?? 0)),
       card('totalProcessingTime','Total Rule Node Execution Duration',    current.totalDurationMs, compare?.totalDurationMs, fmtDur),
     ];

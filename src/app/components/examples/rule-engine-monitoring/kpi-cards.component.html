@@ -41,7 +41,15 @@
 
 <div class="rem-kpi-cards" *ngIf="!initialLoading && !errorMessage">
   <div class="rem-kpi-card" *ngFor="let card of cards; trackBy: trackByCard">
-    <div class="rem-kpi-label">{{ card.label }}</div>
+    <div class="rem-kpi-label">
+      <span>{{ card.label }}</span>
+      <mat-icon *ngIf="cardDescriptions[card.key] as desc"
+                #cardTip="matTooltip"
+                class="rem-kpi-info"
+                [matTooltip]="desc"
+                matTooltipPosition="above"
+                (click)="cardTip.toggle()">info_outline</mat-icon>
+    </div>
     <div class="rem-kpi-value">{{ card.primaryValue }}</div>
     <div class="rem-kpi-before" *ngIf="card.beforeValue">{{ card.beforeValue }}</div>
     <div class="rem-kpi-delta" *ngIf="card.deltaLabel"

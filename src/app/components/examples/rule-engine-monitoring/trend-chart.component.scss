@@ -123,6 +123,17 @@
   flex-shrink: 0;
 }
 
+.rem-tc-legend-info {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  color: rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+
+  &:hover { color: rgba(0, 0, 0, 0.6); }
+}
+
 .rem-tc-loading {
   display: flex;
   justify-content: center;

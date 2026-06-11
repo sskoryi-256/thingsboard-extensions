@@ -33,7 +33,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injector } from '@angular/core';
 import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { FilterOptions, FilterState, MergedStatsDelta, MergedStatsTableRow, NodeTsEntry, QueueTsEntry } from './rule-engine-monitoring.models';
+import { FilterOptions, FilterState, MergedStatsDelta, MergedStatsTableRow, NodeTsEntry, QueueLagTsEntry, QueueTsEntry } from './rule-engine-monitoring.models';
 import { buildGroupByParam } from './rule-engine-monitoring.utils';
 
 export interface RuleEngineHttpError {
@@ -88,6 +88,26 @@ export class RuleEngineMonitoringWidgetService {
   getQueueStatsTimeseries(filter: FilterState, intervalMs: number): Observable<QueueTsEntry[]> {
     const params = this.buildFilterParams(filter).set('intervalMs', intervalMs.toString());
     return this.http.get<QueueTsEntry[]>('/api/ruleEngineMonitoring/queueStats/timeseries', {
+      params,
+      ...this.authHeader()
+    }).pipe(catchError(this.rethrow));
+  }
+
+  getQueueLagStatsTimeseries(filter: FilterState, intervalMs: number): Observable<QueueLagTsEntry[]> {
+    const params = this.buildFilterParams(filter).set('intervalMs', intervalMs.toString());
+    return this.http.get<QueueLagTsEntry[]>('/api/ruleEngineMonitoring/queueLagStats/timeseries', {
+      params,
+      ...this.authHeader()
+    }).pipe(catchError(this.rethrow));
+  }
+
+  // Last-known total queue lag. Backend returns a single number (the "all queues" aggregate when queueIds is empty).
+  getCurrentQueueLag(queueIds?: string[]): Observable<number> {
+    let params = new HttpParams();
+    for (const id of queueIds ?? []) {
+      params = params.append('queueIds', id);
+    }
+    return this.http.get<number>('/api/ruleEngineMonitoring/queueLagStats/last', {
       params,
       ...this.authHeader()
     }).pipe(catchError(this.rethrow));

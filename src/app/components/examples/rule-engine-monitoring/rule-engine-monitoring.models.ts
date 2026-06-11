@@ -118,6 +118,12 @@ export interface QueueTsEntry {
   timeoutCount: number | null;
 }
 
+// Matches backend QueueLagTimeseriesEntry JSON fields (queueTenantId/queueId are null when not grouped)
+export interface QueueLagTsEntry {
+  bucketTime: number;
+  lag: number | null;
+}
+
 // Matches backend MergedStatsTableRow JSON
 export interface MergedStatsTableRow {
   queueId:         string | null;
