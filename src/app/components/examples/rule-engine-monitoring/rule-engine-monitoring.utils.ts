@@ -52,6 +52,43 @@ export function formatDuration(ms: number): string {
   return `${(ms / 3_600_000).toFixed(1)} h`;
 }
 
+/** Human-friendly "time ago" relative to a reference instant (`now`), e.g. "2 min ago", "1 hour ago",
+ *  "Yesterday". Returns "—" when the timestamp is missing/zero. Used for the Last Observed column,
+ *  where `now` is the end of the selected dashboard time range. */
+export function formatRelativeTime(ts: number | null | undefined, now: number): string {
+  if (!ts) { return '—'; }
+  const diffMs = now - ts;
+  if (diffMs < 45_000) { return 'just now'; }
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 60) { return `${min} min ago`; }
+  const hr = Math.floor(min / 60);
+  if (hr < 24) { return `${hr} hour${hr === 1 ? '' : 's'} ago`; }
+  const day = Math.floor(hr / 24);
+  if (day === 1) { return 'Yesterday'; }
+  if (day < 7) { return `${day} days ago`; }
+  const wk = Math.floor(day / 7);
+  if (wk < 5) { return `${wk} week${wk === 1 ? '' : 's'} ago`; }
+  const mo = Math.floor(day / 30);
+  if (mo < 12) { return `${mo} month${mo === 1 ? '' : 's'} ago`; }
+  const yr = Math.floor(day / 365);
+  return `${yr} year${yr === 1 ? '' : 's'} ago`;
+}
+
+/** Formats a 0..1 ratio as a percentage, e.g. 0.9695 → "97.0%". */
+export function formatPercent(rate: number | null): string {
+  if (rate === null || rate === undefined) { return '—'; }
+  return `${(rate * 100).toFixed(1)}%`;
+}
+
+/** Strips the package prefix from a fully-qualified rule node type:
+ *  "org.thingsboard.rule.engine.filter.TbJsFilterNode" → "TbJsFilterNode".
+ *  Leaves already-short types untouched. */
+export function shortNodeType(type: string | null): string {
+  if (!type) { return '—'; }
+  const idx = type.lastIndexOf('.');
+  return idx >= 0 ? type.substring(idx + 1) : type;
+}
+
 /** Compact number formatting for the inspector: 1,200,000 → "1.2M", 18,900 → "18.9K", 134,000 → "134K". */
 export function formatCompact(n: number): string {
   const abs = Math.abs(n);

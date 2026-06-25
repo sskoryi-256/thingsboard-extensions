@@ -42,29 +42,38 @@
   gap: 12px;
   height: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-y: auto;   // dashboard may exceed one viewport — scroll vertically
+  overflow-x: hidden;
   background: #f5f5f5;
 }
 
 .rem-filter-section,
 .rem-kpi-section,
 .rem-chart-section,
-.rem-table-section {
+.rem-table-section,
+.rem-paths-section {
   background: #fff;
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+// Filters and KPI cards keep their compact natural height
+.rem-filter-section,
+.rem-kpi-section {
+  flex: 0 0 auto;
+}
+
+// Charts + aggregated stats table — the larger, top diagnostics area (~58% of ~145vh content)
 .rem-bottom-row {
   display: flex;
   gap: 12px;
-  flex: 1 1 0;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: 70vh;
   align-items: stretch;
 
   .rem-chart-section {
-    flex: 1 1 0;
+    flex: 0 0 65%;
     min-width: 0;
     overflow: hidden;
     display: flex;
@@ -78,6 +87,14 @@
     display: flex;
     flex-direction: column;
   }
+}
+
+// Execution Paths — full-width investigation section (~42% of ~145vh content)
+.rem-paths-section {
+  flex: 0 0 auto;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .rem-breadcrumb {

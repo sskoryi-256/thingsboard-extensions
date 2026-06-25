@@ -98,4 +98,12 @@
     </div>
   </div>
 
+  <!-- Tracing (Execution Paths + Traces sibling views) -->
+  <div class="rem-paths-section" *ngIf="filterState">
+    <tb-rem-tracing
+        [filterState]="filterState"
+        [injector]="injector">
+    </tb-rem-tracing>
+  </div>
+
 </div>

@@ -31,16 +31,27 @@
 
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injector } from '@angular/core';
-import { Observable } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { FilterOptions, FilterState, MergedStatsDelta, MergedStatsTableRow, NodeTsEntry, QueueLagTsEntry, QueueTsEntry } from './rule-engine-monitoring.models';
+import { Observable, of } from 'rxjs';
+import { catchError, delay } from 'rxjs/operators';
+import { FilterOptions, FilterState, MergedStatsDelta, MergedStatsTableRow, NodeTsEntry, QueueLagTsEntry, QueueTsEntry, TraceDetail, TraceListItem, TraceSettings, TraceStatsResponse } from './rule-engine-monitoring.models';
 import { buildGroupByParam } from './rule-engine-monitoring.utils';
+import { TRACE_STATS_MOCK } from './execution-paths.mock';
+import { buildTraceDetail, TRACE_LIST_MOCK } from './traces.mock';
 
 export interface RuleEngineHttpError {
   status: number;
 }
 
 export class RuleEngineMonitoringWidgetService {
+
+  // TEMPORARY in-memory trace settings (mock) — persists for the session across component
+  // instances until the real settings endpoint is wired up.
+  private static traceSettings: TraceSettings = {
+    enabled: true,
+    tracesPerInterval: 100,
+    interval: 60,
+    ruleEngineSwitchInterval: 300,
+  };
 
   private http: HttpClient;
 
@@ -75,6 +86,42 @@ export class RuleEngineMonitoringWidgetService {
       params,
       ...this.authHeader()
     }).pipe(catchError(this.rethrow));
+  }
+
+  // Trace path statistics — one entry per distinct execution path.
+  // TEMPORARY: served from the openspec/api.json mock (see execution-paths.mock.ts) instead of the
+  // real /api/ruleEngineMonitoring/traceStats endpoint, which is not wired up yet. The `delay`
+  // simulates network latency so the loading state is exercised. Swap `of(...)` for the HTTP call
+  // below once the backend is available.
+  getTraceStats(_filter: FilterState): Observable<TraceStatsResponse> {
+    return of(TRACE_STATS_MOCK).pipe(delay(300));
+    // const params = this.buildFilterParams(_filter);
+    // return this.http.get<TraceStatsResponse>('/api/ruleEngineMonitoring/traceStats', {
+    //   params,
+    //   ...this.authHeader()
+    // }).pipe(catchError(this.rethrow));
+  }
+
+  // Individual traces for the global Traces list — TEMPORARY mock (see traces.mock.ts). The time range
+  // is honoured client-side; finer filters are applied in the component. Swap for the HTTP call when ready.
+  getTraces(filter: FilterState): Observable<TraceListItem[]> {
+    const list = TRACE_LIST_MOCK.filter(t => t.startTs >= filter.startTs && t.startTs <= filter.endTs);
+    return of(list).pipe(delay(300));
+  }
+
+  // Full trace detail (span waterfall) for the shared Trace Details view — TEMPORARY mock.
+  getTrace(traceId: string): Observable<TraceDetail | null> {
+    return of(buildTraceDetail(traceId)).pipe(delay(200));
+  }
+
+  // Trace settings — TEMPORARY mock (see static traceSettings above). Swap for HTTP calls when ready.
+  getTraceSettings(): Observable<TraceSettings> {
+    return of({ ...RuleEngineMonitoringWidgetService.traceSettings }).pipe(delay(150));
+  }
+
+  saveTraceSettings(settings: TraceSettings): Observable<TraceSettings> {
+    RuleEngineMonitoringWidgetService.traceSettings = { ...settings };
+    return of({ ...RuleEngineMonitoringWidgetService.traceSettings }).pipe(delay(200));
   }
 
   getNodeStatsTimeseries(filter: FilterState, intervalMs: number): Observable<NodeTsEntry[]> {

@@ -42,6 +42,11 @@ import { FilterBarComponent } from './rule-engine-monitoring/filter-bar.componen
 import { KpiCardsComponent } from './rule-engine-monitoring/kpi-cards.component';
 import { TrendChartComponent } from './rule-engine-monitoring/trend-chart.component';
 import { StatTableComponent } from './rule-engine-monitoring/stat-table.component';
+import { ExecutionPathsComponent } from './rule-engine-monitoring/execution-paths.component';
+import { TracingComponent } from './rule-engine-monitoring/tracing.component';
+import { TracesComponent } from './rule-engine-monitoring/traces.component';
+import { TraceDetailsComponent } from './rule-engine-monitoring/trace-details.component';
+import { PaginatorComponent } from './rule-engine-monitoring/paginator.component';
 
 @NgModule({
   declarations: [
@@ -50,6 +55,11 @@ import { StatTableComponent } from './rule-engine-monitoring/stat-table.componen
     KpiCardsComponent,
     TrendChartComponent,
     StatTableComponent,
+    ExecutionPathsComponent,
+    TracingComponent,
+    TracesComponent,
+    TraceDetailsComponent,
+    PaginatorComponent,
   ],
   imports: [
     CommonModule,
@@ -64,6 +74,11 @@ import { StatTableComponent } from './rule-engine-monitoring/stat-table.componen
     KpiCardsComponent,
     TrendChartComponent,
     StatTableComponent,
+    ExecutionPathsComponent,
+    TracingComponent,
+    TracesComponent,
+    TraceDetailsComponent,
+    PaginatorComponent,
   ]
 })
 export class ExamplesModule {
