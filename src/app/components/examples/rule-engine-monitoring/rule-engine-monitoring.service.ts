@@ -227,6 +227,7 @@ export class RuleEngineMonitoringWidgetService {
       ruleEngineSwitchInterval: s.switchPeriodSeconds,
       relatedTraceSampleInterval: s.relatedTraceSampleIntervalSeconds,
       messagePayloadRecording: this.fromApiMessagePayloadRecording(s.messagePayloadRecording),
+      maxTraceGroupsPerDay: s.maxTraceGroupsPerDay ?? 0,
     };
   }
 
@@ -240,6 +241,7 @@ export class RuleEngineMonitoringWidgetService {
       switchPeriodSeconds: s.ruleEngineSwitchInterval,
       relatedTraceSampleIntervalSeconds: s.relatedTraceSampleInterval,
       messagePayloadRecording: this.toApiMessagePayloadRecording(s.messagePayloadRecording),
+      maxTraceGroupsPerDay: s.maxTraceGroupsPerDay,
     };
   }
 

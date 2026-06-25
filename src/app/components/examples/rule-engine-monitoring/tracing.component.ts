@@ -289,6 +289,19 @@ export class TracingComponent implements OnChanges {
     }
   }
 
+  /** "Max trace groups per day" unlimited toggle — stored as maxTraceGroupsPerDay = 0 (semantics preserved). */
+  get groupsUnlimited(): boolean {
+    return this.draft?.maxTraceGroupsPerDay === 0;
+  }
+  set groupsUnlimited(v: boolean) {
+    if (!this.draft) { return; }
+    if (v) {
+      this.draft.maxTraceGroupsPerDay = 0;
+    } else if (this.draft.maxTraceGroupsPerDay <= 0) {
+      this.draft.maxTraceGroupsPerDay = 1;
+    }
+  }
+
   closeSettings(): void {
     this.settingsOpen = false;
     this.draft = null;
@@ -305,11 +318,18 @@ export class TracingComponent implements OnChanges {
     return value === null || value === undefined || value < 1 || !Number.isInteger(value);
   }
 
+  // maxTraceGroupsPerDay: "Unlimited" stores 0 (always valid); otherwise it must be a positive whole number.
+  groupsCountInvalid(value: number | null | undefined): boolean {
+    if (!this.draft?.enabled || this.groupsUnlimited) { return false; }
+    return value === null || value === undefined || value < 1 || !Number.isInteger(value);
+  }
+
   get settingsValid(): boolean {
     if (!this.draft) { return false; }
     if (!this.draft.enabled) { return true; }
     return !this.fieldInvalid(this.draft.tracesPerInterval)
       && !this.packCountInvalid(this.draft.tracesPerPack)
+      && !this.groupsCountInvalid(this.draft.maxTraceGroupsPerDay)
       && !this.fieldInvalid(this.draft.interval)
       && !this.fieldInvalid(this.draft.relatedTraceSampleInterval)
       && (!this.draft.ruleEngineRotation || !this.fieldInvalid(this.draft.ruleEngineSwitchInterval));

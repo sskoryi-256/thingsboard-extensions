@@ -151,6 +151,15 @@
           <div class="rem-tg-field-error" *ngIf="packCountInvalid(draft.tracesPerPack)">Must be a positive whole number</div>
         </div>
 
+        <div class="rem-tg-field">
+          <label>Max trace groups per day</label>
+          <label class="rem-tg-field-check rem-tg-field-check--inline">
+            <input type="checkbox" [(ngModel)]="groupsUnlimited" /> Unlimited
+          </label>
+          <input type="number" min="1" step="1" class="rem-tg-num" *ngIf="!groupsUnlimited" [(ngModel)]="draft.maxTraceGroupsPerDay" />
+          <div class="rem-tg-field-error" *ngIf="groupsCountInvalid(draft.maxTraceGroupsPerDay)">Must be a positive whole number</div>
+        </div>
+
         <!-- Saved traces -->
         <div class="rem-tg-field-section">Saved traces</div>
         <div class="rem-tg-field">

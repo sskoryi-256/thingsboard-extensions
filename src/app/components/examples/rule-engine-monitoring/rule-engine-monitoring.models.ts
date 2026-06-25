@@ -303,6 +303,7 @@ export interface TraceSettings {
   ruleEngineSwitchInterval: number; // how often tracing rotates to another rule engine, seconds (when rotation is on)
   relatedTraceSampleInterval: number; // min spacing between drill-down traces persisted per path, seconds
   messagePayloadRecording: MessagePayloadRecording; // controls message data/metadata capture
+  maxTraceGroupsPerDay: number;     // max trace groups (paths) tracked per tenant per day; 0 = unlimited
 }
 
 // Backend trace coverage setting payload (GET/POST /api/traces/coverage). The rate-limit window is an
@@ -316,6 +317,7 @@ export interface ApiTraceCoverageSetting {
   switchPeriodSeconds: number;
   relatedTraceSampleIntervalSeconds: number;
   messagePayloadRecording?: ApiMessagePayloadRecording;
+  maxTraceGroupsPerDay: number;
 }
 
 // ── Individual traces (global Traces view + shared Trace Details) ───────────────
