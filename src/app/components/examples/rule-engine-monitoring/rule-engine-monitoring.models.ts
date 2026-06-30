@@ -291,11 +291,31 @@ export interface TraceStatsResponse {
 }
 
 // Tracing configuration shown/edited in the Trace Settings drawer
+export type MessagePayloadRecording = 'NONE' | 'FIRST_SPAN' | 'ALL_SPANS';
+export type ApiMessagePayloadRecording = MessagePayloadRecording;
+
 export interface TraceSettings {
   enabled: boolean;
   tracesPerInterval: number;        // max traces collected per interval
+  tracesPerPack: number;            // max traced messages per pack per tenant; 0 = unlimited
   interval: number;                 // collection interval, seconds
-  ruleEngineSwitchInterval: number; // how often tracing rotates to another rule engine, seconds
+  ruleEngineRotation: boolean;      // whether tracing rotates across rule engine instances
+  ruleEngineSwitchInterval: number; // how often tracing rotates to another rule engine, seconds (when rotation is on)
+  relatedTraceSampleInterval: number; // min spacing between drill-down traces persisted per path, seconds
+  messagePayloadRecording: MessagePayloadRecording; // controls message data/metadata capture
+}
+
+// Backend trace coverage setting payload (GET/POST /api/traces/coverage). The rate-limit window is an
+// enum (per SECOND or per MINUTE); the rest map 1:1 to TraceSettings.
+export interface ApiTraceCoverageSetting {
+  enabled: boolean;
+  tracesPerInterval: number;
+  tracesPerPack: number;
+  intervalUnit: 'SECOND' | 'MINUTE';
+  ruleEngineRotation: boolean;
+  switchPeriodSeconds: number;
+  relatedTraceSampleIntervalSeconds: number;
+  messagePayloadRecording?: ApiMessagePayloadRecording;
 }
 
 // ── Individual traces (global Traces view + shared Trace Details) ───────────────
@@ -318,9 +338,6 @@ export interface TraceListItem {
   messageType: string;      // root message type
   ruleChainId: string;
   ruleChainName: string;    // root rule chain
-  serviceCount: number;     // distinct rule-engine services touched
-  queueCount: number;       // distinct queues touched
-  ruleChainCount: number;   // distinct rule chains touched
   ruleNodeCount: number;    // distinct rule nodes touched
   // distinct entities the trace touches (for the Traces filters; "contains at least one such span")
   services: string[];
@@ -333,22 +350,133 @@ export interface TraceListItem {
 
 // A span (rule-node hop) in a trace's waterfall. Structurally matches the graph node used by the
 // execution-paths timeline; see trace-graph.util.ts.
+// Per-span status used for tree highlighting + timeline bar colour (matches the pure-JS widget).
+export type SpanStatus = 'success' | 'error' | 'timeoutCanceled' | 'timeoutContinued';
+
 export interface TraceSpan {
   spanId: string;
   name: string;
   type: string;             // short rule-node type
   ruleChain: string;
+  queueName?: string | null;
   serviceId: string;        // rule engine instance, e.g. "rule-engine-0"
   relation: string | null;  // label on the edge into this span (null at root)
   startMs: number;          // relative to trace start
   durationMs: number;
   error: boolean;
+  // Trace-detail-only enrichment (set by buildTraceDetailFromApi; optional for the path-graph/mock builders)
+  startTs?: number;         // absolute span start (epoch ms)
+  endTs?: number;           // absolute span end (epoch ms)
+  status?: SpanStatus;      // success | error | timeoutCanceled | timeoutContinued
+  retry?: boolean;          // message reprocessed (same message.id seen among siblings)
+  messageId?: string | null;
+  statusCode?: string | null;
+  statusMessage?: string | null;     // error/status message shown as the exception for error spans
+  attributes?: ApiSpanAttribute[];   // raw attributes for the span-detail panel
   children: TraceSpan[];
 }
 
 // Full trace detail: the list item plus the resolved span tree.
 export interface TraceDetail extends TraceListItem {
   spans: TraceSpan[];       // root spans (tree)
+  // Header counters (set by buildTraceDetailFromApi; optional for the mock builder)
+  spanCount?: number;        // total rule nodes (spans)
+  errorCount?: number;       // spans with an error status
+  retriesCount?: number;     // spans flagged as retries
+  timedOutCanceledCount?: number;    // timed-out branches where the message was canceled
+  timedOutContinuedCount?: number;   // timed-out branches where processing continued
+}
+
+// ── Execution path API (trace_group-backed; see openspec/Architecture/path-api.md) ──────────────
+
+// Generic paginated envelope returned by the backend (matches PageData<>).
+export interface PageData<T> {
+  data: T[];
+  totalPages: number;
+  totalElements: number;
+  hasNext: boolean;
+}
+
+// Id+name option used by the path filter dropdowns.
+export interface PathOptionRef {
+  id: string;
+  name: string;
+}
+
+export interface PathRuleNodeOptionRef extends PathOptionRef {
+  ruleChainId: string;
+}
+
+// GET /api/traces/paths/filters → consolidated filter options (mirrors RuleEngineMonitoringFilters).
+export interface TracePathFilters {
+  queues: PathOptionRef[];
+  ruleChains: PathOptionRef[];
+  ruleNodes: PathRuleNodeOptionRef[];
+  messageTypes: string[];
+}
+
+// GET /api/traces/paths → one row per aggregated execution path (TracePathDTO).
+export interface PathListItem {
+  pathId: string;
+  rootQueueId: string | null;
+  rootQueueName: string | null;
+  rootMessageType: string | null;
+  rootRuleChainId: string | null;
+  rootRuleChainName: string | null;
+  processedTraces: number;
+  processedTracesWithTimeout: number;
+  processedTracesWithError: number;
+  storedTraces: number;
+  totalTime: number;
+  maxTime: number;
+  totalInQueueTime: number;
+  totalRuleNodeProcessingTime: number;
+  errorCount: number;
+  lastObserved: number;
+}
+
+// A node of the rule node tree returned by the path details endpoint, carrying its aggregated metrics.
+export interface RuleNodeTreeNode {
+  ruleNodeId: string;
+  ruleNodeName: string;
+  ruleNodeType: string;
+  ruleChainId: string | null;
+  ruleChainName: string | null;
+  queueId: string | null;
+  queueName: string | null;
+  relation: string | null;          // label on the edge into this node (null at root)
+  totalTime: number;
+  totalCount: number;
+  errors: number;
+  children: RuleNodeTreeNode[];
+}
+
+// GET /api/traces/paths/{pathId} → path summary + logical rule node tree (TracePathDetailsDTO).
+export interface TracePathDetails extends PathListItem {
+  ruleNodeTree: RuleNodeTreeNode[];
+}
+
+// Sort fields accepted by GET /api/traces/paths.
+export type PathSortField =
+  'ROOT_QUEUE' | 'ROOT_MESSAGE_TYPE' | 'ROOT_RULE_CHAIN' | 'LAST_OBSERVED' |
+  'TRACES_COUNT' | 'STORED_TRACES' | 'TIMEOUT_TRACES' | 'ERROR_TRACES' |
+  'AVG_TIME' | 'AVG_IN_QUEUE_TIME' | 'AVG_RULE_NODE_PROCESSING_TIME' | 'MAX_TIME' | 'ERROR_COUNT';
+
+export type PathSortOrder = 'ASC' | 'DESC';
+
+export type TraceSortField = 'START_TIME' | 'RULE_NODE_COUNT' | 'DURATION' | 'IN_QUEUE_TIME' | 'TOTAL_SPAN_TIME';
+
+export type TraceSortOrder = 'ASC' | 'DESC';
+
+// Query parameters for the paginated paths list (entry-point filters + paging + sort).
+export interface PathListQuery {
+  page: number;
+  pageSize: number;
+  sortBy: PathSortField;
+  sortOrder: PathSortOrder;
+  rootQueueId?: string | null;
+  rootMessageType?: string | null;
+  rootRuleChainId?: string | null;
 }
 
 // Reference to an execution path used as a Traces-view filter (set from Path Details "View traces").
@@ -357,20 +485,92 @@ export interface ExecutionPathRef {
   label: string;            // e.g. "HighPriority / ALARM / Root Rule Chain"
 }
 
+// GET /api/traces/filters → consolidated filter options for the Traces list (separate from TracePathFilters).
+export interface TraceListFilters {
+  ruleEngines: string[];
+  queues: PathOptionRef[];
+  ruleChains: PathOptionRef[];
+  ruleNodes: PathRuleNodeOptionRef[];
+  messageTypes: string[];
+}
+
+// GET /api/traces (searchTraces) row — the enriched trace summary (counts, not name arrays).
+export interface ApiTraceDTO {
+  traceId: string;
+  startTime: number;
+  endTime?: number | null;
+  duration?: number | null;
+  spanCount?: number | null;
+  errorCount?: number | null;
+  inQueueTime?: number | null;
+  totalSpanTime?: number | null;
+  rootQueueId?: string | null;
+  queueName?: string | null;
+  messageType?: string | null;
+  rootRuleChainId?: string | null;
+  ruleNodeCount?: number | null;
+  hasErrors?: boolean | null;
+  hasQueueTimeouts?: boolean | null;
+}
+
+// ── Trace details API responses (GET /api/traces/{id} and /spans/tree) ──────────────
+
+export interface ApiTraceSummary {
+  traceId: string;
+  serviceName?: string | null;
+  startTime: number;
+  endTime?: number | null;
+  duration?: number | null;
+  spanCount?: number | null;
+  errorCount?: number | null;
+  inQueueTime?: number | null;
+  totalSpanTime?: number | null;
+}
+
+export interface ApiSpanAttribute {
+  attributeKey: string;
+  attributeValueString?: string | null;
+  attributeValueNumber?: number | null;
+  attributeValueBoolean?: boolean | null;
+}
+
+
+export interface ApiSpanTreeNode {
+  spanId: string;
+  parentSpanId?: string | null;
+  name: string;
+  serviceName?: string | null;
+  startTime: number;
+  endTime?: number | null;
+  duration?: number | null;
+  statusCode?: string | null;
+  statusMessage?: string | null;
+  children: ApiSpanTreeNode[];
+  attributes: ApiSpanAttribute[];
+}
+
 // Filter model for the global Traces list. null/false = unset. Combined with AND.
 export interface TraceFilters {
+  traceId: string | null;      // exact trace id (when set, other filters are ignored)
   ruleEngine: string | null;   // trace touches this rule-engine service
   queue: string | null;        // trace touches this queue
   ruleChain: string | null;    // trace has at least one span in this rule chain
   ruleNode: string | null;     // trace has at least one span in this rule node
+  messageType: string | null;  // root message type (dropdown)
+  messageId: string | null;    // exact message id (custom entered)
+  originator: string | null;   // exact originator id (custom entered)
+  messageData: string | null;  // substring match on input.msg.data (custom entered)
+  messageMetadata: string | null; // substring match on input.msg.metadata (custom entered)
   withTimeout: boolean;        // trace has at least one timed-out span
   withError: boolean;          // trace has at least one failed span
-  pathId: string | null;       // set from Execution Paths "View traces"
+  pathId: string | null;       // group id, set from Trace Groups "View traces" or the Saved Traces filter
 }
 
 export function emptyTraceFilters(): TraceFilters {
   return {
+    traceId: null,
     ruleEngine: null, queue: null, ruleChain: null, ruleNode: null,
+    messageType: null, messageId: null, originator: null, messageData: null, messageMetadata: null,
     withTimeout: false, withError: false, pathId: null,
   };
 }

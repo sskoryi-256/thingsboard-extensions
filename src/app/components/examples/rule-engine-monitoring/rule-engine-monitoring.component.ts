@@ -80,6 +80,10 @@ export class RuleEngineMonitoringComponent implements OnInit {
   errorMessage: string | null = null;
   injector: Injector | null = null;
 
+  // top-level dashboard tab; both panels stay mounted (toggled via [hidden]) so filters, pagination,
+  // the selected nested tab, and scroll position survive switching. Performance is selected by default.
+  activeDashboard: 'performance' | 'tracing' = 'performance';
+
   private preCompareFilterState: FilterState | null = null;
 
   private service: RuleEngineMonitoringWidgetService;

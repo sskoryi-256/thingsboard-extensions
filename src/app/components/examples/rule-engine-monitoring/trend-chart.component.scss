@@ -190,7 +190,7 @@
   flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;        // scroll like the table when charts don't fit the available height
-  gap: 12px;
+  gap: 8px;
 }
 
 // Sections don't form their own flex box — their title + chart blocks participate directly in
@@ -209,10 +209,11 @@
 .rem-tc-chart-block {
   display: flex;
   flex-direction: column;
-  // Grow to fill spare vertical space, but never shrink below min-height — so charts use all
-  // available room when there's plenty, and the container scrolls only when they'd get too short.
-  flex: 1 1 auto;
-  min-height: 180px;
+  // Charts share the available height proportionally (flex grow/shrink). The min-height is the
+  // minimum *readable* chart height: above it, all charts shrink to fit the viewport with no scroll;
+  // once the viewport is too short to honour it for every chart, .rem-tc-charts scrolls instead of clipping.
+  flex: 1 1 0;
+  min-height: 100px;
   gap: 4px;
 }
 

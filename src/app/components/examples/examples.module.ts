@@ -47,6 +47,7 @@ import { TracingComponent } from './rule-engine-monitoring/tracing.component';
 import { TracesComponent } from './rule-engine-monitoring/traces.component';
 import { TraceDetailsComponent } from './rule-engine-monitoring/trace-details.component';
 import { PaginatorComponent } from './rule-engine-monitoring/paginator.component';
+import { TimeRangeSelectorComponent } from './rule-engine-monitoring/time-range-selector.component';
 
 @NgModule({
   declarations: [
@@ -60,6 +61,7 @@ import { PaginatorComponent } from './rule-engine-monitoring/paginator.component
     TracesComponent,
     TraceDetailsComponent,
     PaginatorComponent,
+    TimeRangeSelectorComponent,
   ],
   imports: [
     CommonModule,

@@ -31,27 +31,17 @@
 
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injector } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { catchError, delay } from 'rxjs/operators';
-import { FilterOptions, FilterState, MergedStatsDelta, MergedStatsTableRow, NodeTsEntry, QueueLagTsEntry, QueueTsEntry, TraceDetail, TraceListItem, TraceSettings, TraceStatsResponse } from './rule-engine-monitoring.models';
-import { buildGroupByParam } from './rule-engine-monitoring.utils';
+import { forkJoin, Observable, of } from 'rxjs';
+import { catchError, delay, map } from 'rxjs/operators';
+import { ApiSpanTreeNode, ApiTraceCoverageSetting, ApiTraceDTO, ApiTraceSummary, FilterOptions, FilterState, MergedStatsDelta, MergedStatsTableRow, NodeTsEntry, PageData, PathListItem, PathListQuery, QueueLagTsEntry, QueueTsEntry, TraceDetail, TraceFilters, TraceListFilters, TracePathDetails, TracePathFilters, TraceSettings, TraceSortField, TraceSortOrder, TraceStatsResponse } from './rule-engine-monitoring.models';
+import { buildGroupByParam, buildTraceDetailFromApi } from './rule-engine-monitoring.utils';
 import { TRACE_STATS_MOCK } from './execution-paths.mock';
-import { buildTraceDetail, TRACE_LIST_MOCK } from './traces.mock';
 
 export interface RuleEngineHttpError {
   status: number;
 }
 
 export class RuleEngineMonitoringWidgetService {
-
-  // TEMPORARY in-memory trace settings (mock) — persists for the session across component
-  // instances until the real settings endpoint is wired up.
-  private static traceSettings: TraceSettings = {
-    enabled: true,
-    tracesPerInterval: 100,
-    interval: 60,
-    ruleEngineSwitchInterval: 300,
-  };
 
   private http: HttpClient;
 
@@ -102,26 +92,166 @@ export class RuleEngineMonitoringWidgetService {
     // }).pipe(catchError(this.rethrow));
   }
 
-  // Individual traces for the global Traces list — TEMPORARY mock (see traces.mock.ts). The time range
-  // is honoured client-side; finer filters are applied in the component. Swap for the HTTP call when ready.
-  getTraces(filter: FilterState): Observable<TraceListItem[]> {
-    const list = TRACE_LIST_MOCK.filter(t => t.startTs >= filter.startTs && t.startTs <= filter.endTs);
-    return of(list).pipe(delay(300));
+  // ── Execution paths (trace_group-backed; see openspec/Architecture/path-api.md) ──────────────
+
+  // Filter dropdown options for the Execution Paths view (single consolidated call).
+  getPathFilters(filter: FilterState): Observable<TracePathFilters> {
+    const params = new HttpParams()
+      .set('startTime', filter.startTs.toString())
+      .set('endTime', filter.endTs.toString());
+    return this.http.get<TracePathFilters>('/api/traces/paths/filters', {
+      params,
+      ...this.authHeader()
+    }).pipe(catchError(this.rethrow));
   }
 
-  // Full trace detail (span waterfall) for the shared Trace Details view — TEMPORARY mock.
+  // Paginated, server-sorted, server-filtered list of execution paths.
+  getPaths(filter: FilterState, query: PathListQuery): Observable<PageData<PathListItem>> {
+    let params = new HttpParams()
+      .set('startTime', filter.startTs.toString())
+      .set('endTime', filter.endTs.toString())
+      .set('page', query.page.toString())
+      .set('pageSize', query.pageSize.toString())
+      .set('sortBy', query.sortBy)
+      .set('sortOrder', query.sortOrder);
+    if (query.rootQueueId) { params = params.set('rootQueueId', query.rootQueueId); }
+    if (query.rootMessageType) { params = params.set('rootMessageType', query.rootMessageType); }
+    if (query.rootRuleChainId) { params = params.set('rootRuleChainId', query.rootRuleChainId); }
+    return this.http.get<PageData<PathListItem>>('/api/traces/paths', {
+      params,
+      ...this.authHeader()
+    }).pipe(catchError(this.rethrow));
+  }
+
+  // Path details: summary + logical rule node tree with per-node metrics.
+  getPathDetails(pathId: string, filter: FilterState): Observable<TracePathDetails> {
+    const params = new HttpParams()
+      .set('startTime', filter.startTs.toString())
+      .set('endTime', filter.endTs.toString());
+    return this.http.get<TracePathDetails>(`/api/traces/paths/${encodeURIComponent(pathId)}`, {
+      params,
+      ...this.authHeader()
+    }).pipe(catchError(this.rethrow));
+  }
+
+  // Filter dropdown options for the Traces list view (rule engines, queues, rule chains, rule nodes, message types).
+  getTraceFilters(): Observable<TraceListFilters> {
+    return this.http.get<TraceListFilters>('/api/traces/filters', this.authHeader()).pipe(
+      catchError(this.rethrow)
+    );
+  }
+
+  // Individual traces for the global Traces list.
+  getTraces(filter: FilterState, traceFilters: TraceFilters, page: number, pageSize: number,
+            ruleChainNameToId: Map<string, string>, ruleNodeNameToId: Map<string, string>,
+            sortBy: TraceSortField = 'START_TIME', sortOrder: TraceSortOrder = 'DESC'):
+    Observable<PageData<ApiTraceDTO>> {
+    let params = new HttpParams()
+      .set('startTime', filter.startTs.toString())
+      .set('endTime', filter.endTs.toString())
+      .set('page', Math.max(page, 0).toString())
+      .set('pageSize', Math.max(pageSize, 1).toString())
+      .set('sortBy', sortBy)
+      .set('sortOrder', sortOrder);
+
+    const traceId = traceFilters.traceId?.trim();
+    if (traceId) {
+      params = params.set('traceId', traceId);
+      return this.http.get<PageData<ApiTraceDTO>>('/api/traces', {
+        params,
+        ...this.authHeader()
+      }).pipe(catchError(this.rethrow));
+    }
+
+    if (traceFilters.ruleEngine) { params = params.set('serviceName', traceFilters.ruleEngine); }
+    if (traceFilters.queue) { params = params.set('queueName', traceFilters.queue); }
+    if (traceFilters.ruleChain) {
+      const ruleChainId = ruleChainNameToId.get(traceFilters.ruleChain) ?? traceFilters.ruleChain;
+      params = params.set('ruleChainId', ruleChainId);
+    }
+    if (traceFilters.ruleNode) {
+      const ruleNodeId = ruleNodeNameToId.get(traceFilters.ruleNode) ?? traceFilters.ruleNode;
+      params = params.set('ruleNodeId', ruleNodeId);
+    }
+    if (traceFilters.messageType) { params = params.set('messageType', traceFilters.messageType); }
+    if (traceFilters.messageId?.trim()) { params = params.set('messageId', traceFilters.messageId.trim()); }
+    if (traceFilters.originator?.trim()) { params = params.set('originatorId', traceFilters.originator.trim()); }
+    if (traceFilters.messageData?.trim()) { params = params.set('messageData', traceFilters.messageData.trim()); }
+    if (traceFilters.messageMetadata?.trim()) { params = params.set('messageMetadata', traceFilters.messageMetadata.trim()); }
+    if (traceFilters.withError) { params = params.set('errorsOnly', 'true'); }
+    if (traceFilters.withTimeout) { params = params.set('hasTimeOutsByQueue', 'true'); }
+    // execution-path drill-down: restrict to the path's saved (related) traces
+    if (traceFilters.pathId) { params = params.set('pathId', traceFilters.pathId); }
+
+    return this.http.get<PageData<ApiTraceDTO>>('/api/traces', {
+      params,
+      ...this.authHeader()
+    }).pipe(catchError(this.rethrow));
+  }
+
+  // Full trace detail (span waterfall) for the shared Trace Details view. Combines the trace summary
+  // (GET /api/traces/{id}) with the span tree (GET /api/traces/{id}/spans/tree) and maps them to TraceDetail.
   getTrace(traceId: string): Observable<TraceDetail | null> {
-    return of(buildTraceDetail(traceId)).pipe(delay(200));
+    const id = encodeURIComponent(traceId);
+    return forkJoin({
+      summary: this.http.get<ApiTraceSummary>(`/api/traces/${id}`, this.authHeader()),
+      tree: this.http.get<ApiSpanTreeNode[]>(`/api/traces/${id}/spans/tree`, this.authHeader()),
+    }).pipe(
+      map(({ summary, tree }) => buildTraceDetailFromApi(traceId, summary, tree ?? [])),
+      catchError(this.rethrow)
+    );
   }
 
-  // Trace settings — TEMPORARY mock (see static traceSettings above). Swap for HTTP calls when ready.
+  // Trace coverage setting — persisted per tenant via GET/POST /api/traces/coverage.
   getTraceSettings(): Observable<TraceSettings> {
-    return of({ ...RuleEngineMonitoringWidgetService.traceSettings }).pipe(delay(150));
+    return this.http.get<ApiTraceCoverageSetting>('/api/traces/coverage', this.authHeader()).pipe(
+      map(s => this.fromApiTraceSetting(s)),
+      catchError(this.rethrow)
+    );
   }
 
   saveTraceSettings(settings: TraceSettings): Observable<TraceSettings> {
-    RuleEngineMonitoringWidgetService.traceSettings = { ...settings };
-    return of({ ...RuleEngineMonitoringWidgetService.traceSettings }).pipe(delay(200));
+    return this.http.post<ApiTraceCoverageSetting>('/api/traces/coverage', this.toApiTraceSetting(settings), this.authHeader()).pipe(
+      map(s => this.fromApiTraceSetting(s)),
+      catchError(this.rethrow)
+    );
+  }
+
+  private fromApiTraceSetting(s: ApiTraceCoverageSetting): TraceSettings {
+    return {
+      enabled: s.enabled,
+      tracesPerInterval: s.tracesPerInterval,
+      tracesPerPack: s.tracesPerPack,
+      interval: s.intervalUnit === 'MINUTE' ? 60 : 1,
+      ruleEngineRotation: s.ruleEngineRotation,
+      ruleEngineSwitchInterval: s.switchPeriodSeconds,
+      relatedTraceSampleInterval: s.relatedTraceSampleIntervalSeconds,
+      messagePayloadRecording: this.fromApiMessagePayloadRecording(s.messagePayloadRecording),
+    };
+  }
+
+  private toApiTraceSetting(s: TraceSettings): ApiTraceCoverageSetting {
+    return {
+      enabled: s.enabled,
+      tracesPerInterval: s.tracesPerInterval,
+      tracesPerPack: s.tracesPerPack,
+      intervalUnit: (s.interval % 60 === 0 && s.interval >= 60) ? 'MINUTE' : 'SECOND',
+      ruleEngineRotation: s.ruleEngineRotation,
+      switchPeriodSeconds: s.ruleEngineSwitchInterval,
+      relatedTraceSampleIntervalSeconds: s.relatedTraceSampleInterval,
+      messagePayloadRecording: this.toApiMessagePayloadRecording(s.messagePayloadRecording),
+    };
+  }
+
+  private fromApiMessagePayloadRecording(value: ApiTraceCoverageSetting['messagePayloadRecording']): TraceSettings['messagePayloadRecording'] {
+    if (value === 'FIRST_SPAN' || value === 'ALL_SPANS') {
+      return value;
+    }
+    return 'NONE';
+  }
+
+  private toApiMessagePayloadRecording(value: TraceSettings['messagePayloadRecording']): ApiTraceCoverageSetting['messagePayloadRecording'] {
+    return value;
   }
 
   getNodeStatsTimeseries(filter: FilterState, intervalMs: number): Observable<NodeTsEntry[]> {
