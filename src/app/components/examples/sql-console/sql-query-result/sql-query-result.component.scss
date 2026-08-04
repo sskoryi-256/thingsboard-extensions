@@ -1,0 +1,221 @@
+/**
+ * ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+ *
+ * Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains
+ * the property of ThingsBoard, Inc. and its suppliers,
+ * if any.  The intellectual and technical concepts contained
+ * herein are proprietary to ThingsBoard, Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents,
+ * patents in process, and are protected by trade secret or copyright law.
+ *
+ * Dissemination of this information or reproduction of this material is strictly forbidden
+ * unless prior written permission is obtained from COMPANY.
+ *
+ * Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+ * managers or contractors who have executed Confidentiality and Non-disclosure agreements
+ * explicitly covering such access.
+ *
+ * The copyright notice above does not evidence any actual or intended publication
+ * or disclosure  of  this source code, which includes
+ * information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+ * ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+ * OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+ * THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+ * AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+ * THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+ * DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+ * OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+ */
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.sqlc-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.03);
+
+  &__title {
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #78909c;
+  }
+}
+
+.sqlc-result {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: #455a64;
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+  }
+
+  &__meta {
+    font-size: 12px;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+  }
+
+  &__placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+    padding: 24px;
+    font-size: 13px;
+    opacity: 0.55;
+
+    .mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+      opacity: 0.7;
+    }
+  }
+
+  &__error {
+    margin: 12px;
+    padding: 14px 16px;
+    border: 1px solid rgba(192, 57, 43, 0.4);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: rgba(192, 57, 43, 0.08);
+
+    &-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: #c0392b;
+
+      .mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    &-msg {
+      margin: 8px 0 0;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+
+    &-hint {
+      margin-top: 8px;
+      font-size: 13px;
+
+      code {
+        font-family: 'Roboto Mono', monospace;
+        background: rgba(0, 0, 0, 0.06);
+        padding: 1px 6px;
+        border-radius: 3px;
+      }
+    }
+
+    &-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+
+      .mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+
+  &__table-wrap {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+  }
+
+  &__table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+    font-size: 13px;
+    color: #455a64;
+
+    th,
+    td {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      border-right: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 6px 12px;
+      text-align: left;
+      white-space: nowrap;
+      max-width: 480px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #eef1f5;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  &__row-index {
+    color: rgba(0, 0, 0, 0.4);
+    font-variant-numeric: tabular-nums;
+    text-align: right !important;
+    user-select: none;
+  }
+
+  &__null {
+    color: rgba(0, 0, 0, 0.38);
+    font-style: italic;
+  }
+
+  &__truncated {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #8a6d1a;
+    background: rgba(191, 160, 15, 0.12);
+  }
+}
+
+.sqlc-status--success { color: #2e7d32; opacity: 1; }
+.sqlc-status--failed { color: #c0392b; opacity: 1; }
+.sqlc-status--running { color: #305680; opacity: 1; }

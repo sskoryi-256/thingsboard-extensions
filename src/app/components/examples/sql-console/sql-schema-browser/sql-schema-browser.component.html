@@ -1,0 +1,105 @@
+<!--
+
+    ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+
+    Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+
+    NOTICE: All information contained herein is, and remains
+    the property of ThingsBoard, Inc. and its suppliers,
+    if any.  The intellectual and technical concepts contained
+    herein are proprietary to ThingsBoard, Inc.
+    and its suppliers and may be covered by U.S. and Foreign Patents,
+    patents in process, and are protected by trade secret or copyright law.
+
+    Dissemination of this information or reproduction of this material is strictly forbidden
+    unless prior written permission is obtained from COMPANY.
+
+    Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+    managers or contractors who have executed Confidentiality and Non-disclosure agreements
+    explicitly covering such access.
+
+    The copyright notice above does not evidence any actual or intended publication
+    or disclosure  of  this source code, which includes
+    information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+    ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+    OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+    THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+    AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+    THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+    DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+    OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+
+-->
+<div class="sqlc-browser">
+  <div class="sqlc-browser__header">
+    <span class="sqlc-browser__title">Business datasets</span>
+    <span class="sqlc-browser__spacer"></span>
+  </div>
+
+  <div class="sqlc-browser__filter">
+    <mat-form-field appearance="outline" class="sqlc-browser__filter-field" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput placeholder="Filter datasets and columns" [(ngModel)]="filter" />
+      <button mat-icon-button matSuffix *ngIf="filter" (click)="filter = ''" aria-label="Clear filter">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
+
+  <div class="sqlc-browser__list">
+    <!-- Analytics datasets — the queryable surface -->
+    <div class="sqlc-group">
+      <div class="sqlc-group__head">
+        <span class="sqlc-group__title">Business datasets</span>
+        <span class="sqlc-badge sqlc-badge--tenant">Tenant-defined</span>
+      </div>
+      <ng-container *ngFor="let item of datasetGroup">
+        <ng-container *ngTemplateOutlet="viewTpl; context: { $implicit: item }"></ng-container>
+      </ng-container>
+      <div class="sqlc-group__empty" *ngIf="!datasetGroup.length">
+        {{ hasDatasets ? 'No datasets match the filter.' : 'No datasets yet. Create one via POST /api/sql/datasets.' }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #viewTpl let-item>
+  <div class="sqlc-view" [class.sqlc-view--open]="isExpanded(item.view)">
+    <div class="sqlc-view__row" (click)="toggle(item.view)">
+      <mat-icon class="sqlc-view__chevron">{{ isExpanded(item.view) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      <span class="sqlc-view__name">{{ viewName(item.view) }}</span>
+      <button mat-icon-button class="sqlc-view__insert" type="button"
+              matTooltip="Insert view name into the editor"
+              (click)="insertView(item.view); $event.stopPropagation()">
+        <mat-icon>login</mat-icon>
+      </button>
+    </div>
+
+    <div class="sqlc-view__body" *ngIf="isExpanded(item.view)">
+      <p class="sqlc-view__desc">{{ item.view.description }}</p>
+
+      <ul class="sqlc-fields" *ngIf="item.fields.length">
+        <li class="sqlc-field" *ngFor="let field of item.fields"
+            (click)="insertField(field)"
+            matTooltip="Insert field name into the editor">
+          <span class="sqlc-field__name">{{ field.name }}</span>
+          <span class="sqlc-field__type">{{ field.type }}</span>
+          <span class="sqlc-field__desc" *ngIf="field.description">{{ field.description }}</span>
+        </li>
+      </ul>
+
+      <div class="sqlc-view__example" *ngIf="item.view.example">
+        <div class="sqlc-view__example-head">
+          <span>Example</span>
+          <button mat-button class="sqlc-view__example-use" type="button"
+                  matTooltip="Load this query into the editor"
+                  (click)="useExampleQuery(item.view)">
+            <mat-icon>north_east</mat-icon>
+            Use query
+          </button>
+        </div>
+        <pre class="sqlc-view__example-code">{{ item.view.example }}</pre>
+      </div>
+    </div>
+  </div>
+</ng-template>

@@ -1,0 +1,102 @@
+<!--
+
+    ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+
+    Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+
+    NOTICE: All information contained herein is, and remains
+    the property of ThingsBoard, Inc. and its suppliers,
+    if any.  The intellectual and technical concepts contained
+    herein are proprietary to ThingsBoard, Inc.
+    and its suppliers and may be covered by U.S. and Foreign Patents,
+    patents in process, and are protected by trade secret or copyright law.
+
+    Dissemination of this information or reproduction of this material is strictly forbidden
+    unless prior written permission is obtained from COMPANY.
+
+    Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+    managers or contractors who have executed Confidentiality and Non-disclosure agreements
+    explicitly covering such access.
+
+    The copyright notice above does not evidence any actual or intended publication
+    or disclosure  of  this source code, which includes
+    information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+    ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+    OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+    THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+    AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+    THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+    DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+    OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+
+-->
+<div class="sqlc-console">
+  <div class="sqlc-panel-header sqlc-console__toolbar" *ngIf="!embedded">
+    <button mat-raised-button color="primary" class="sqlc-console__run"
+            (click)="run()" [disabled]="running"
+            matTooltip="Run query (Ctrl/Cmd + Enter)">
+      <mat-icon>play_arrow</mat-icon>
+      Run query
+    </button>
+    <button mat-stroked-button (click)="format()" [disabled]="running"
+            matTooltip="Format the query">
+      <mat-icon>format_align_left</mat-icon>
+      Format
+    </button>
+    <button mat-stroked-button (click)="clear()" [disabled]="running"
+            matTooltip="Clear the editor">
+      <mat-icon>clear</mat-icon>
+      Clear
+    </button>
+
+    <span class="sqlc-console__spacer"></span>
+    <span class="sqlc-panel-header__title">SQL editor</span>
+  </div>
+
+  <div class="sqlc-console__editor-wrap">
+    <div #gutter class="sqlc-console__gutter" aria-hidden="true">
+      <div class="sqlc-console__gutter-line"
+           [class.sqlc-console__gutter-line--active]="line === currentLine"
+           *ngFor="let line of lineNumbers; trackBy: trackLine">{{ line }}</div>
+    </div>
+
+    <textarea #editor
+              class="sqlc-console__editor"
+              spellcheck="false"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              wrap="off"
+              placeholder="SELECT * FROM thingsboard_sql.assets LIMIT 100;"
+              [ngModel]="query"
+              (ngModelChange)="onQueryInput($event)"
+              (keydown)="onKeydown($event)"
+              (keyup)="onCaretMove()"
+              (click)="onCaretMove()"
+              (scroll)="onScroll()"
+              (blur)="onBlur()"></textarea>
+
+    <ul class="sqlc-autocomplete"
+        *ngIf="showSuggestions"
+        [style.top.px]="popupTop"
+        [style.left.px]="popupLeft">
+      <li *ngFor="let s of suggestions; let i = index"
+          class="sqlc-autocomplete__item"
+          [class.sqlc-autocomplete__item--active]="i === activeIndex"
+          (mousedown)="$event.preventDefault(); acceptSuggestion(i)">
+        <span class="sqlc-autocomplete__kind sqlc-autocomplete__kind--{{ s.kind }}">{{ s.kind }}</span>
+        <span class="sqlc-autocomplete__label">{{ s.label }}</span>
+        <span class="sqlc-autocomplete__detail" *ngIf="s.detail">{{ s.detail }}</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sqlc-console__hint" *ngIf="!embedded">
+    <span class="sqlc-console__validation" *ngIf="validationError">
+      <mat-icon>error_outline</mat-icon>{{ validationError }}
+    </span>
+    <span class="sqlc-console__shortcut" *ngIf="!validationError">
+      Read-only queries. Press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Enter</kbd> to run.
+    </span>
+  </div>
+</div>

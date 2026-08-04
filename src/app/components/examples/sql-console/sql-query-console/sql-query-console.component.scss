@@ -1,0 +1,221 @@
+/**
+ * ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+ *
+ * Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains
+ * the property of ThingsBoard, Inc. and its suppliers,
+ * if any.  The intellectual and technical concepts contained
+ * herein are proprietary to ThingsBoard, Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents,
+ * patents in process, and are protected by trade secret or copyright law.
+ *
+ * Dissemination of this information or reproduction of this material is strictly forbidden
+ * unless prior written permission is obtained from COMPANY.
+ *
+ * Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+ * managers or contractors who have executed Confidentiality and Non-disclosure agreements
+ * explicitly covering such access.
+ *
+ * The copyright notice above does not evidence any actual or intended publication
+ * or disclosure  of  this source code, which includes
+ * information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+ * ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+ * OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+ * THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+ * AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+ * THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+ * DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+ * OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+ */
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.sqlc-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.03);
+
+  &__title {
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #78909c;
+  }
+}
+
+.sqlc-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: #455a64;
+
+  &__toolbar {
+    .mat-icon {
+      margin-right: 4px;
+    }
+    button {
+      font-size: 13px;
+    }
+  }
+
+  &__spacer {
+    flex: 1 1 auto;
+  }
+
+  &__editor-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 120px;
+    display: flex;
+    margin: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fbfbfc;
+
+    &:focus-within {
+      border-color: #305680;
+      box-shadow: 0 0 0 1px rgba(48, 86, 128, 0.35);
+    }
+  }
+
+  $editor-line-height: 20px;
+
+  &__gutter {
+    flex: 0 0 auto;
+    width: 44px;
+    padding: 10px 6px 10px 0;
+    overflow: hidden;
+    text-align: right;
+    user-select: none;
+    font-family: 'Roboto Mono', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: $editor-line-height;
+    color: rgba(0, 0, 0, 0.32);
+    background: rgba(0, 0, 0, 0.04);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  &__gutter-line {
+    height: $editor-line-height;
+
+    &--active {
+      color: #305680;
+      font-weight: 600;
+    }
+  }
+
+  &__editor {
+    flex: 1 1 auto;
+    width: 100%;
+    resize: none;
+    border: none;
+    padding: 10px 12px;
+    font-family: 'Roboto Mono', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: $editor-line-height;
+    tab-size: 4;
+    background: transparent;
+    color: #37474f;
+    outline: none;
+    white-space: pre;
+    overflow: auto;
+  }
+
+  &__hint {
+    padding: 4px 12px 8px;
+    min-height: 22px;
+    font-size: 12px;
+  }
+
+  &__shortcut {
+    opacity: 0.55;
+
+    kbd {
+      font-family: inherit;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 3px;
+      padding: 0 4px;
+    }
+  }
+
+  &__validation {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #c0392b;
+
+    .mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+.sqlc-autocomplete {
+  position: absolute;
+  z-index: 1000;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  min-width: 240px;
+  max-width: 360px;
+  max-height: 240px;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+
+  &__item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 13px;
+
+    &--active,
+    &:hover {
+      background: rgba(48, 86, 128, 0.12);
+    }
+  }
+
+  &__kind {
+    flex: 0 0 auto;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.08);
+    opacity: 0.8;
+  }
+
+  &__kind--view { background: rgba(48, 86, 128, 0.16); }
+  &__kind--field { background: rgba(46, 125, 50, 0.16); }
+  &__kind--function { background: rgba(191, 108, 15, 0.16); }
+
+  &__label {
+    flex: 1 1 auto;
+    font-family: 'Roboto Mono', monospace;
+  }
+
+  &__detail {
+    flex: 0 0 auto;
+    font-size: 11px;
+    opacity: 0.55;
+  }
+}

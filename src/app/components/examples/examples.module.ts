@@ -31,6 +31,11 @@
 
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { SharedModule } from '@shared/public-api';
 import {
   BasicWidgetConfigModule,
@@ -48,6 +53,10 @@ import { TracesComponent } from './rule-engine-monitoring/traces.component';
 import { TraceDetailsComponent } from './rule-engine-monitoring/trace-details.component';
 import { PaginatorComponent } from './rule-engine-monitoring/paginator.component';
 import { TimeRangeSelectorComponent } from './rule-engine-monitoring/time-range-selector.component';
+import { SqlConsolePageComponent } from './sql-console/sql-console-page.component';
+import { SqlSchemaBrowserComponent } from './sql-console/sql-schema-browser/sql-schema-browser.component';
+import { SqlQueryConsoleComponent } from './sql-console/sql-query-console/sql-query-console.component';
+import { SqlQueryResultComponent } from './sql-console/sql-query-result/sql-query-result.component';
 
 @NgModule({
   declarations: [
@@ -62,13 +71,22 @@ import { TimeRangeSelectorComponent } from './rule-engine-monitoring/time-range-
     TraceDetailsComponent,
     PaginatorComponent,
     TimeRangeSelectorComponent,
+    SqlConsolePageComponent,
+    SqlSchemaBrowserComponent,
+    SqlQueryConsoleComponent,
+    SqlQueryResultComponent,
   ],
   imports: [
     CommonModule,
     SharedModule,
     HomeComponentsModule,
     BasicWidgetConfigModule,
-    WidgetConfigComponentsModule
+    WidgetConfigComponentsModule,
+    MatExpansionModule,
+    MatProgressBarModule,
+    MatProgressSpinnerModule,
+    MatDialogModule,
+    MatSnackBarModule
   ],
   exports: [
     RuleEngineMonitoringComponent,
@@ -81,6 +99,10 @@ import { TimeRangeSelectorComponent } from './rule-engine-monitoring/time-range-
     TracesComponent,
     TraceDetailsComponent,
     PaginatorComponent,
+    SqlConsolePageComponent,
+    SqlSchemaBrowserComponent,
+    SqlQueryConsoleComponent,
+    SqlQueryResultComponent,
   ]
 })
 export class ExamplesModule {

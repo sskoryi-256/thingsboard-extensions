@@ -29,23 +29,31 @@
 /// OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
 ///
 
-export * from './examples.module';
+import { SqlDatasetInfo, SqlViewDefinition } from './sql-schema.model';
 
-export * from './rule-engine-monitoring/rule-engine-monitoring.component';
-export * from './rule-engine-monitoring/filter-bar.component';
-export * from './rule-engine-monitoring/kpi-cards.component';
-export * from './rule-engine-monitoring/trend-chart.component';
-export * from './rule-engine-monitoring/stat-table.component';
-export * from './rule-engine-monitoring/execution-paths.component';
-export * from './rule-engine-monitoring/tracing.component';
-export * from './rule-engine-monitoring/traces.component';
-export * from './rule-engine-monitoring/trace-details.component';
-export * from './rule-engine-monitoring/paginator.component';
+/**
+ * Prepopulated query shown when the console first opens. Analytics datasets are the
+ * only queryable relations and are referenced by their bare logical name.
+ */
+export const INITIAL_QUERY =
+  `SELECT *\nFROM rooms\nLIMIT 100;`;
 
-export * from './sql-console/sql-schema.model';
-export * from './sql-console/sql-schema.data';
-export * from './sql-console/sql-query.service';
-export * from './sql-console/sql-console-page.component';
-export * from './sql-console/sql-schema-browser/sql-schema-browser.component';
-export * from './sql-console/sql-query-console/sql-query-console.component';
-export * from './sql-console/sql-query-result/sql-query-result.component';
+/**
+ * Maps an analytics dataset (from GET /api/sql/datasets) to a schema-browser / autocomplete
+ * entry. Datasets are referenced by their bare logical name (no schema prefix), so {@code schema}
+ * is empty; {@link fullViewName} renders the bare name accordingly.
+ */
+export function datasetViewDefinition(info: SqlDatasetInfo): SqlViewDefinition {
+  const synced = info.syncStatus?.lastSyncTs
+    ? `last synced ${new Date(info.syncStatus.lastSyncTs).toLocaleString()}`
+    : 'not yet synced';
+  const error = info.syncStatus?.lastError ? ` — last error: ${info.syncStatus.lastError}` : '';
+  return {
+    schema: '',
+    name: info.name,
+    description: `Analytics dataset (${synced})${error}.`,
+    fields: (info.columns ?? []).map(c => ({ name: c.name, type: c.type ?? 'text', description: c.source })),
+    source: 'dataset',
+    example: `SELECT *\nFROM ${info.name}\nLIMIT 100;`
+  };
+}

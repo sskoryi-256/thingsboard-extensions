@@ -1,0 +1,123 @@
+<!--
+
+    ThingsBoard, Inc. ("COMPANY") CONFIDENTIAL
+
+    Copyright © 2016-2026 ThingsBoard, Inc. All Rights Reserved.
+
+    NOTICE: All information contained herein is, and remains
+    the property of ThingsBoard, Inc. and its suppliers,
+    if any.  The intellectual and technical concepts contained
+    herein are proprietary to ThingsBoard, Inc.
+    and its suppliers and may be covered by U.S. and Foreign Patents,
+    patents in process, and are protected by trade secret or copyright law.
+
+    Dissemination of this information or reproduction of this material is strictly forbidden
+    unless prior written permission is obtained from COMPANY.
+
+    Access to the source code contained herein is hereby forbidden to anyone except current COMPANY employees,
+    managers or contractors who have executed Confidentiality and Non-disclosure agreements
+    explicitly covering such access.
+
+    The copyright notice above does not evidence any actual or intended publication
+    or disclosure  of  this source code, which includes
+    information that is confidential and/or proprietary, and is a trade secret, of  COMPANY.
+    ANY REPRODUCTION, MODIFICATION, DISTRIBUTION, PUBLIC  PERFORMANCE,
+    OR PUBLIC DISPLAY OF OR THROUGH USE  OF THIS  SOURCE CODE  WITHOUT
+    THE EXPRESS WRITTEN CONSENT OF COMPANY IS STRICTLY PROHIBITED,
+    AND IN VIOLATION OF APPLICABLE LAWS AND INTERNATIONAL TREATIES.
+    THE RECEIPT OR POSSESSION OF THIS SOURCE CODE AND/OR RELATED INFORMATION
+    DOES NOT CONVEY OR IMPLY ANY RIGHTS TO REPRODUCE, DISCLOSE OR DISTRIBUTE ITS CONTENTS,
+    OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
+
+-->
+<div class="sqlc-result">
+  <div class="sqlc-panel-header sqlc-result__bar">
+    <span class="sqlc-panel-header__title">Results</span>
+    <span class="sqlc-result__spacer"></span>
+
+    <span class="sqlc-result__status" [ngClass]="'sqlc-status--' + status">
+      <mat-progress-spinner *ngIf="status === 'running'" diameter="14" mode="indeterminate"></mat-progress-spinner>
+      {{ statusLabel }}
+    </span>
+    <span class="sqlc-result__meta" *ngIf="!loading && (rowCount || executionTimeMs !== null)">
+      <ng-container *ngIf="!error && rowCount">{{ rowCount }} {{ rowCount === 1 ? 'row' : 'rows' }}</ng-container>
+      <ng-container *ngIf="executionTimeMs !== null"> · {{ executionTimeMs }} ms</ng-container>
+    </span>
+    <button mat-stroked-button *ngIf="!loading && !error && rowCount" (click)="copyAsJson()"
+            matTooltip="Copy the full result as JSON">
+      <mat-icon>content_copy</mat-icon>
+      {{ copyState === 'copied' ? 'Copied' : 'Copy JSON' }}
+    </button>
+  </div>
+
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <div class="sqlc-result__body">
+    <!-- Loading -->
+    <div class="sqlc-result__placeholder" *ngIf="loading">
+      <mat-icon>hourglass_top</mat-icon>
+      <span>Running query…</span>
+    </div>
+
+    <!-- Error -->
+    <div class="sqlc-result__error" *ngIf="error && !loading">
+      <div class="sqlc-result__error-head">
+        <mat-icon>error</mat-icon>
+        <span>Query failed<ng-container *ngIf="executionTimeMs !== null"> · {{ executionTimeMs }} ms</ng-container></span>
+      </div>
+      <p class="sqlc-result__error-msg">{{ error }}</p>
+
+      <div class="sqlc-result__error-hint" *ngIf="suggestion">
+        Did you mean <code>{{ suggestion.full }}</code>?
+      </div>
+
+      <div class="sqlc-result__error-actions">
+        <button mat-stroked-button *ngIf="suggestion" (click)="applySuggestion()">
+          <mat-icon>auto_fix_high</mat-icon>
+          Insert corrected view name
+        </button>
+        <button mat-stroked-button (click)="copyError()">
+          <mat-icon>content_copy</mat-icon>
+          {{ copyErrorState === 'copied' ? 'Copied' : 'Copy error' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Idle (before first run) -->
+    <div class="sqlc-result__placeholder" *ngIf="!loading && !error && status === 'idle'">
+      <mat-icon>play_circle_outline</mat-icon>
+      <span>Run a query to see results.</span>
+    </div>
+
+    <!-- Empty result -->
+    <div class="sqlc-result__placeholder" *ngIf="!loading && !error && status !== 'idle' && !rowCount">
+      <mat-icon>table_chart</mat-icon>
+      <span>Query returned no rows.</span>
+    </div>
+
+    <!-- Result table -->
+    <div class="sqlc-result__table-wrap" *ngIf="!error && !loading && rowCount">
+      <table class="sqlc-result__table">
+        <thead>
+          <tr>
+            <th class="sqlc-result__row-index">#</th>
+            <th *ngFor="let column of columns">{{ column }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of displayRows; let i = index">
+            <td class="sqlc-result__row-index">{{ i + 1 }}</td>
+            <td *ngFor="let column of columns"
+                [class.sqlc-result__null]="isNull(row, column)">
+              {{ cell(row, column) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sqlc-result__truncated" *ngIf="truncated && !loading && !error">
+    Showing first {{ maxRows }} of {{ rowCount }} rows. Refine the query (e.g. add LIMIT) or use Copy JSON for the full set.
+  </div>
+</div>
