@@ -86,7 +86,6 @@ export class TracingComponent implements OnChanges {
   draft: TraceSettings | null = null;
   settingsOpen = false;
   settingsSaving = false;
-  intervalUnit: 'seconds' | 'minutes' = 'seconds';
   sampleUnit: 'seconds' | 'minutes' = 'minutes';
 
   private service: RuleEngineMonitoringWidgetService | null = null;
@@ -241,20 +240,9 @@ export class TracingComponent implements OnChanges {
   openSettings(): void {
     if (!this.settings) { return; }
     this.draft = { ...this.settings };
-    this.intervalUnit = 'seconds';
     this.sampleUnit = 'minutes';
     this.settingsOpen = true;
     this.cdr.detectChanges();
-  }
-
-  get intervalValue(): number | null {
-    if (!this.draft) { return null; }
-    return this.intervalUnit === 'minutes' ? this.draft.interval / 60 : this.draft.interval;
-  }
-  set intervalValue(v: number | null) {
-    if (!this.draft) { return; }
-    const n = v ?? 0;
-    this.draft.interval = this.intervalUnit === 'minutes' ? n * 60 : n;
   }
 
   get switchMinutes(): number | null {

@@ -133,11 +133,8 @@
         <div class="rem-tg-field">
           <label>Interval</label>
           <div class="rem-tg-field-inline">
-            <input type="number" min="1" class="rem-tg-num" [(ngModel)]="intervalValue" />
-            <select class="rem-tg-unit-select" [(ngModel)]="intervalUnit">
-              <option value="seconds">seconds</option>
-              <option value="minutes">minutes</option>
-            </select>
+            <input type="number" min="1" step="1" class="rem-tg-num" [(ngModel)]="draft.interval" />
+            <span class="rem-tg-field-unit">seconds</span>
           </div>
           <div class="rem-tg-field-error" *ngIf="fieldInvalid(draft.interval)">Must be greater than 0</div>
         </div>

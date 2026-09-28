@@ -90,8 +90,8 @@
     </tb-rem-kpi-cards>
   </div>
 
-  <div class="rem-bottom-row" *ngIf="filterState">
-    <div class="rem-chart-section">
+  <div class="rem-bottom-row" [class.rem-bottom-row--dragging]="splitDragging" *ngIf="filterState">
+    <div class="rem-chart-section" [style.flex-basis.%]="chartPanePct">
       <tb-rem-trend-chart
           [filterState]="filterState"
           [rangeSelectActive]="rangeSelectActive"
@@ -100,6 +100,14 @@
           (rangeSelected)="onRangeSelected($event)"
           (refresh)="onChartRefresh()">
       </tb-rem-trend-chart>
+    </div>
+
+    <!-- drag the divider to rebalance charts vs table; double-click restores the default split -->
+    <div class="rem-split-handle"
+         (mousedown)="startSplitResize($event)"
+         (dblclick)="resetSplit()"
+         title="Drag to resize, double-click to reset">
+      <span class="rem-split-grip"></span>
     </div>
 
     <div class="rem-table-section">

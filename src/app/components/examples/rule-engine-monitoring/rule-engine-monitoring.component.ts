@@ -29,7 +29,7 @@
 /// OR TO MANUFACTURE, USE, OR SELL ANYTHING THAT IT  MAY DESCRIBE, IN WHOLE OR IN PART.
 ///
 
-import { Component, Injector, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Injector, Input, OnInit, ViewChild } from '@angular/core';
 import { WidgetContext } from '@home/models/widget-component.models';
 import { CompareState, FilterOptions, FilterState } from './rule-engine-monitoring.models';
 import { RuleEngineMonitoringWidgetService, RuleEngineHttpError } from './rule-engine-monitoring.service';
@@ -84,9 +84,17 @@ export class RuleEngineMonitoringComponent implements OnInit {
   // the selected nested tab, and scroll position survive switching. Performance is selected by default.
   activeDashboard: 'performance' | 'tracing' = 'performance';
 
+  // Width of the charts pane as a percentage of the bottom row; the table pane takes the rest.
+  chartPanePct = 65;
+  splitDragging = false;
+  private splitStartX = 0;
+  private splitStartPct = 65;
+
   private preCompareFilterState: FilterState | null = null;
 
   private service: RuleEngineMonitoringWidgetService;
+
+  constructor(private host: ElementRef<HTMLElement>) {}
 
   ngOnInit(): void {
     this.ctx.$scope.ruleEngineMonitoringWidget = this;
@@ -230,5 +238,34 @@ export class RuleEngineMonitoringComponent implements OnInit {
         this.ctx.detectChanges();
       }
     });
+  }
+
+  startSplitResize(event: MouseEvent): void {
+    this.splitDragging = true;
+    this.splitStartX = event.clientX;
+    this.splitStartPct = this.chartPanePct;
+    // Keep the gesture here: without this the surrounding ThingsBoard dashboard starts dragging the widget.
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onSplitDrag(event: MouseEvent): void {
+    if (!this.splitDragging) { return; }
+    const row = this.host.nativeElement.querySelector('.rem-bottom-row') as HTMLElement | null;
+    const width = row?.clientWidth ?? 0;
+    if (!width) { return; }
+    const deltaPct = ((event.clientX - this.splitStartX) / width) * 100;
+    this.chartPanePct = Math.min(85, Math.max(20, this.splitStartPct + deltaPct));
+  }
+
+  @HostListener('document:mouseup')
+  endSplitResize(): void {
+    this.splitDragging = false;
+  }
+
+  /** Double-click the divider to return to the default split. */
+  resetSplit(): void {
+    this.chartPanePct = 65;
   }
 }

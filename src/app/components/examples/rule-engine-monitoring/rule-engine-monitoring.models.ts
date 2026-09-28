@@ -306,13 +306,12 @@ export interface TraceSettings {
   maxTraceGroupsPerDay: number;     // max trace groups (paths) tracked per tenant per day; 0 = unlimited
 }
 
-// Backend trace coverage setting payload (GET/POST /api/traces/coverage). The rate-limit window is an
-// enum (per SECOND or per MINUTE); the rest map 1:1 to TraceSettings.
+// Backend trace coverage setting payload (GET/POST /api/traces/coverage). Maps 1:1 to TraceSettings.
 export interface ApiTraceCoverageSetting {
   enabled: boolean;
   tracesPerInterval: number;
   tracesPerPack: number;
-  intervalUnit: 'SECOND' | 'MINUTE';
+  intervalSeconds: number;
   ruleEngineRotation: boolean;
   switchPeriodSeconds: number;
   relatedTraceSampleIntervalSeconds: number;

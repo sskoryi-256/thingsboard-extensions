@@ -135,7 +135,7 @@
   align-items: stretch;
 
   .rem-chart-section {
-    flex: 0 0 65%;
+    flex: 0 0 65%;   // overridden inline by the drag handle
     min-width: 0;
     overflow: hidden;
     display: flex;
@@ -249,4 +249,34 @@
   color: rgba(0, 0, 0, 0.6);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+// Divider between the charts and the stat table on the Performance tab.
+.rem-split-handle {
+  flex: 0 0 auto;
+  width: 10px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  user-select: none;
+  border-radius: 4px;
+
+  &:hover { background: rgba(63, 115, 227, 0.12); }
+}
+
+.rem-split-grip {
+  width: 3px;
+  height: 36px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+// While dragging, keep the pointer from selecting text or landing inside the charts.
+.rem-bottom-row--dragging {
+  cursor: col-resize;
+  user-select: none;
+
+  * { pointer-events: none; }
 }
